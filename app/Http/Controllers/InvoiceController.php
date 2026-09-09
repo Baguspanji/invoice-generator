@@ -3,35 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InvoiceStatus;
+use App\Exports\InvoiceItemsExport;
+use App\Exports\InvoicesExport;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Setting;
+use App\Support\ExcelDownload;
 use App\Support\Terbilang;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request): View
     {
-        $invoices = Invoice::with('customer')
-            ->when($request->query('search'), function ($query, $search): void {
-                $query->where(function ($inner) use ($search): void {
-                    $inner->where('invoice_number', 'like', "%{$search}%")
-                        ->orWhereHas('customer', fn ($customer) => $customer->where('name', 'like', "%{$search}%"));
-                });
-            })
-            ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status))
+        $invoices = $this->filteredQuery($request)
             ->latest('invoice_date')
             ->paginate(10)
             ->withQueryString();
 
         return view('invoices.index', ['invoices' => $invoices]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $invoices = $this->filteredQuery($request)
+            ->orderBy('invoice_date')
+            ->get();
+
+        return ExcelDownload::stream(
+            InvoicesExport::spreadsheet($invoices),
+            'daftar-invoice-'.now()->format('Ymd-His').'.xlsx'
+        );
     }
 
     public function create(): View
@@ -112,6 +122,13 @@ class InvoiceController extends Controller
         return view('invoices.show', ['invoice' => $invoice->load(['customer', 'items'])]);
     }
 
+    public function exportItems(Invoice $invoice): StreamedResponse
+    {
+        $filename = str_replace(['/', '\\'], '-', $invoice->invoice_number).'.xlsx';
+
+        return ExcelDownload::stream(InvoiceItemsExport::spreadsheet($invoice), $filename);
+    }
+
     public function downloadPdf(Invoice $invoice): Response
     {
         $invoice->load(['customer', 'items']);
@@ -154,6 +171,21 @@ class InvoiceController extends Controller
         $invoice->markAsCancelled();
 
         return back()->with('success', "Invoice {$invoice->invoice_number} dibatalkan.");
+    }
+
+    /**
+     * @return Builder<Invoice>
+     */
+    private function filteredQuery(Request $request)
+    {
+        return Invoice::with('customer')
+            ->when($request->query('search'), function ($query, $search): void {
+                $query->where(function ($inner) use ($search): void {
+                    $inner->where('invoice_number', 'like', "%{$search}%")
+                        ->orWhereHas('customer', fn ($customer) => $customer->where('name', 'like', "%{$search}%"));
+                });
+            })
+            ->when($request->query('status'), fn ($query, $status) => $query->where('status', $status));
     }
 
     private function nextInvoiceNumber(Carbon $date): string

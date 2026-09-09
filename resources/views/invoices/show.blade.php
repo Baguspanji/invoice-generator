@@ -14,6 +14,10 @@
                 class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
                 Unduh PDF
             </a>
+            <a href="{{ route('invoices.excel', $invoice) }}"
+                class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                Export Excel
+            </a>
             @if (($invoice->status instanceof \BackedEnum ? $invoice->status->value : $invoice->status) === 'UNPAID')
                 <form method="POST" action="{{ route('invoices.pay', $invoice) }}" class="inline">
                     @csrf

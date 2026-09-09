@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InvoiceStatus;
+use App\Exports\ReportExport;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Setting;
+use App\Support\ExcelDownload;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
@@ -43,6 +48,60 @@ class ReportController extends Controller
 
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    public function exportExcel(Request $request): StreamedResponse
+    {
+        $data = $this->buildReport($request);
+        $filename = sprintf(
+            'laporan-pendapatan-%s-%s.xlsx',
+            $data['period'],
+            $data['period'] === 'daily' ? $data['year'].'-'.str_pad((string) $data['month'], 2, '0', STR_PAD_LEFT) : $data['year']
+        );
+
+        return ExcelDownload::stream(ReportExport::spreadsheet($data), $filename);
+    }
+
+    public function recapPdf(Request $request): Response
+    {
+        $year = (int) $request->query('year', date('Y'));
+
+        $monthly = [];
+        $monthLabels = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+        foreach (range(1, 12) as $month) {
+            $query = Invoice::where('status', InvoiceStatus::PAID)->whereYear('paid_at', $year)->whereMonth('paid_at', $month);
+            $monthly[] = [
+                'label' => $monthLabels[$month - 1],
+                'count' => (clone $query)->count(),
+                'total' => (float) (clone $query)->sum('total_amount'),
+            ];
+        }
+
+        $totalRevenue = array_sum(array_column($monthly, 'total'));
+        $totalInvoices = array_sum(array_column($monthly, 'count'));
+
+        $categoryTotals = InvoiceItem::select('category')
+            ->selectRaw('SUM(total_price) as total')
+            ->whereHas('invoice', fn ($query) => $query->where('status', InvoiceStatus::PAID)->whereYear('paid_at', $year))
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row): array => ['label' => $row->category ?? 'Tanpa Kategori', 'total' => (float) $row->total])
+            ->all();
+
+        $pdf = Pdf::loadView('reports.recap-pdf', [
+            'year' => $year,
+            'monthly' => $monthly,
+            'categoryTotals' => $categoryTotals,
+            'totalRevenue' => $totalRevenue,
+            'totalInvoices' => $totalInvoices,
+            'averageTicket' => $totalInvoices > 0 ? $totalRevenue / $totalInvoices : 0,
+            'senderName' => Setting::get('sender_name', config('app.name')),
+            'printedAt' => now()->translatedFormat('j F Y H:i'),
+        ])->setPaper('a4');
+
+        return $pdf->download("rekap-pendapatan-{$year}.pdf");
     }
 
     /**

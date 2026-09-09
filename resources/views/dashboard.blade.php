@@ -91,7 +91,7 @@
                 @endforelse
             </div>
 
-            <a href="#"
+            <a href="{{ route('reports.recap', ['year' => $selectedYear]) }}"
                 class="mt-6 flex w-full items-center justify-center rounded-lg bg-dark py-2.5 text-sm font-semibold text-white shadow-sm transition duration-150 hover:bg-slate-800 dark:bg-slate-200 dark:text-slate-900 dark:hover:bg-white">
                 <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

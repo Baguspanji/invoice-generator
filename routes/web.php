@@ -22,6 +22,8 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('/reports/export-excel', [ReportController::class, 'exportExcel'])->name('reports.export-excel');
+    Route::get('/reports/recap', [ReportController::class, 'recapPdf'])->name('reports.recap');
 
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
@@ -37,8 +39,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::get('/invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
     Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+    Route::get('/invoices/export', [InvoiceController::class, 'export'])->name('invoices.export');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+    Route::get('/invoices/{invoice}/excel', [InvoiceController::class, 'exportItems'])->name('invoices.excel');
 
     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'markAsPaid'])
         ->middleware('invoice.unpaid')
