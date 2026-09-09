@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CustomerType;
 use App\Models\Customer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -31,14 +33,7 @@ class CustomerController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string'],
-        ]);
-
-        $customer = Customer::create($validated);
+        $customer = Customer::create($this->validated($request));
 
         return redirect()
             ->route('customers.show', $customer)
@@ -66,14 +61,7 @@ class CustomerController extends Controller
 
     public function update(Request $request, Customer $customer): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string'],
-        ]);
-
-        $customer->update($validated);
+        $customer->update($this->validated($request));
 
         return redirect()
             ->route('customers.show', $customer)
@@ -93,5 +81,20 @@ class CustomerController extends Controller
         return redirect()
             ->route('customers.index')
             ->with('success', "Pelanggan {$customer->name} berhasil dihapus.");
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validated(Request $request): array
+    {
+        return $request->validate([
+            'type' => ['required', Rule::enum(CustomerType::class)],
+            'identity_number' => ['nullable', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string'],
+        ]);
     }
 }

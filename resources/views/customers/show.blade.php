@@ -24,6 +24,14 @@
             <h3 class="mb-4 text-lg font-bold text-dark dark:text-white">Kontak</h3>
             <dl class="space-y-3 text-sm">
                 <div>
+                    <dt class="font-medium text-slate-500 dark:text-slate-400">Tipe</dt>
+                    <dd class="text-dark dark:text-white">{{ $customer->type->label() }}</dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-slate-500 dark:text-slate-400">{{ $customer->isCompany() ? 'Nama Instansi' : 'No. KTP' }}</dt>
+                    <dd class="text-dark dark:text-white">{{ $customer->isCompany() ? $customer->name : ($customer->identity_number ?? '-') }}</dd>
+                </div>
+                <div>
                     <dt class="font-medium text-slate-500 dark:text-slate-400">Email</dt>
                     <dd class="text-dark dark:text-white">{{ $customer->email ?? '-' }}</dd>
                 </div>

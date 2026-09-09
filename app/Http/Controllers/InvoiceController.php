@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\InvoiceStatus;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Setting;
+use App\Support\Terbilang;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 class InvoiceController extends Controller
 {
@@ -106,6 +110,34 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): View
     {
         return view('invoices.show', ['invoice' => $invoice->load(['customer', 'items'])]);
+    }
+
+    public function downloadPdf(Invoice $invoice): Response
+    {
+        $invoice->load(['customer', 'items']);
+
+        $settings = Setting::getMany([
+            'sender_id_number',
+            'sender_name',
+            'sender_address',
+            'sender_phone',
+            'bank_name',
+            'bank_account_number',
+            'bank_account_name',
+            'payment_note',
+            'invoice_title',
+            'invoice_subtitle',
+        ]);
+
+        $pdf = Pdf::loadView('invoices.pdf', [
+            'invoice' => $invoice,
+            'settings' => $settings,
+            'terbilang' => Terbilang::make($invoice->total_amount),
+        ])->setPaper('a4');
+
+        $filename = str_replace(['/', '\\'], '-', $invoice->invoice_number).'.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function markAsPaid(Invoice $invoice): RedirectResponse

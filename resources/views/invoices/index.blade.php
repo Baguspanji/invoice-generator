@@ -120,7 +120,7 @@
                                             </path>
                                         </svg>
                                     </a>
-                                    <a href="#" class="text-slate-500 hover:text-primary dark:text-slate-400"
+                                    <a href="{{ route('invoices.pdf', $invoice) }}" class="text-slate-500 hover:text-primary dark:text-slate-400"
                                         title="Unduh PDF">
                                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

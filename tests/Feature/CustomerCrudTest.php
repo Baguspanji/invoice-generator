@@ -25,6 +25,7 @@ test('pengguna dapat menambah pelanggan', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post('/customers', [
+        'type' => 'COMPANY',
         'name' => 'CV Sumber Rejeki',
         'email' => 'halo@sumberrejeki.id',
         'phone' => '081234567890',
@@ -49,6 +50,8 @@ test('pengguna dapat memperbarui pelanggan', function () {
     $customer = Customer::factory()->create();
 
     $response = $this->actingAs($user)->put(route('customers.update', $customer), [
+        'type' => 'INDIVIDUAL',
+        'identity_number' => '3514151110930003',
         'name' => 'Nama Baru',
         'email' => $customer->email,
         'phone' => $customer->phone,

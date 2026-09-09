@@ -34,6 +34,7 @@
                 <thead class="bg-slate-50 dark:bg-slate-800">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nama</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipe</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Telepon</th>
                         <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Jml Invoice</th>
@@ -45,6 +46,11 @@
                         <tr class="transition duration-150 hover:bg-slate-50 dark:hover:bg-slate-800">
                             <td class="whitespace-nowrap px-6 py-4 text-sm font-semibold text-dark dark:text-white">
                                 <a href="{{ route('customers.show', $customer) }}" class="hover:text-primary">{{ $customer->name }}</a>
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-4">
+                                <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold leading-5 {{ $customer->isCompany() ? 'bg-blue-50 text-primary dark:bg-blue-500/10 dark:text-blue-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-500/10 dark:text-slate-400' }}">
+                                    {{ $customer->type->label() }}
+                                </span>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $customer->email ?? '-' }}</td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{ $customer->phone ?? '-' }}</td>
@@ -70,7 +76,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Belum ada pelanggan.</td>
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Belum ada pelanggan.</td>
                         </tr>
                     @endforelse
                 </tbody>
