@@ -66,9 +66,9 @@ test('PDF invoice pelanggan perusahaan menampilkan nama instansi', function () {
         'terbilang' => Terbilang::make($invoice->total_amount),
     ])->render();
 
-    expect($html)->toContain('Nama Instansi');
-    // Satu-satunya "No. KTP" yang tersisa berasal dari blok DARI (pengirim).
-    expect(substr_count($html, 'No. KTP'))->toBe(1);
+    expect($html)->toContain('Perusahaan');
+    // Tidak ada "No. KTP" sama sekali pada invoice perusahaan.
+    expect(substr_count($html, 'No. KTP'))->toBe(0);
 });
 
 test('pengaturan dapat diperbarui dan dipakai PDF', function () {
