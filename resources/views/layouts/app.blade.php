@@ -31,28 +31,18 @@
     <div class="min-h-screen bg-slate-50 dark:bg-slate-950">
         @include('layouts.partials.navbar')
 
-        <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            @if (session('success'))
-                <div
-                    class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-400">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div
-                    class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900 dark:bg-red-500/10 dark:text-red-400">
-                    <ul class="list-inside list-disc">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
+        <main class="mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 md:pb-8 lg:px-8">
             @yield('content')
         </main>
+
+        @include('layouts.partials.bottom-nav')
     </div>
+
+    @if (session('success') || $errors->any())
+        <script>
+            window.__flash = @json(['success' => session('success'), 'errors' => $errors->all()]);
+        </script>
+    @endif
 
     @stack('scripts')
 </body>
