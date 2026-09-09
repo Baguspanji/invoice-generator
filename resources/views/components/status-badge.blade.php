@@ -4,9 +4,9 @@
     $value = $status instanceof \BackedEnum ? $status->value : (string) $status;
 
     $classes = match ($value) {
-        'PAID' => 'bg-emerald-50 text-success',
-        'UNPAID' => 'bg-amber-50 text-warning',
-        default => 'bg-slate-100 text-slate-500',
+        'PAID' => 'bg-emerald-50 text-success dark:bg-emerald-500/10 dark:text-emerald-400',
+        'UNPAID' => 'bg-amber-50 text-warning dark:bg-amber-500/10 dark:text-amber-400',
+        default => 'bg-slate-100 text-slate-500 dark:bg-slate-500/10 dark:text-slate-400',
     };
 @endphp
 
