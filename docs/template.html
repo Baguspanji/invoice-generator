@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Invoice Engine & Revenue Summary System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#2563eb',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        dark: '#0f172a'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- ========================================== -->
+    <!-- SECTION 1: LOGIN PAGE                      -->
+    <!-- ========================================== -->
+    <div class="min-h-screen flex flex-col items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 border-b border-slate-200">
+        <div class="w-full max-w-md">
+            <!-- Logo & Title -->
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center mb-4">
+                    <div class="bg-primary p-3 rounded-xl shadow-sm">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                </div>
+                <h1 class="text-3xl font-extrabold text-dark tracking-tight">InvoiceSummary</h1>
+                <p class="mt-2 text-sm text-slate-500">Masuk ke Dashboard Keuangan</p>
+            </div>
+
+            <!-- Login Card -->
+            <div class="bg-white py-8 px-6 shadow-sm border border-slate-200 rounded-xl">
+                <form class="space-y-6" onsubmit="event.preventDefault(); alert('Login simulated!');">
+                    <!-- Email Input -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-slate-700">Alamat Email</label>
+                        <div class="mt-1 relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <input type="email" name="email" id="email" class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg focus:ring-primary focus:border-primary transition duration-150 ease-in-out sm:text-sm" placeholder="admin@perusahaan.com">
+                        </div>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-slate-700">Kata Sandi</label>
+                        <div class="mt-1 relative rounded-lg shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.1.9-2 2-2m-6 2V7a4 4 0 118 0v4m-9 0h10a2 2 0 012 2v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7a2 2 0 012-2z"></path></svg>
+                            </div>
+                            <input type="password" name="password" id="password" class="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-lg focus:ring-primary focus:border-primary transition duration-150 ease-in-out sm:text-sm" placeholder="********">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                <button type="button" onclick="togglePassword()" class="text-slate-400 hover:text-slate-600 focus:outline-none">
+                                    <svg id="eye-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Remember & Forgot -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded">
+                            <label for="remember-me" class="ml-2 block text-sm text-slate-600">Ingat Saya</label>
+                        </div>
+                        <div class="text-sm">
+                            <a href="#" class="font-medium text-primary hover:text-blue-700">Lupa Password?</a>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div>
+                        <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150">
+                            Masuk ke Sistem
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Security Badge -->
+            <p class="mt-6 text-center text-xs text-slate-400">🔒 Encrypted 256-bit Connection</p>
+        </div>
+    </div>
+
+    <!-- Separator -->
+    <div class="bg-dark text-white text-center py-2 text-xs font-medium tracking-widest uppercase">Dashboard Preview</div>
+
+
+    <!-- ========================================== -->
+    <!-- SECTION 2: DASHBOARD PAGE                  -->
+    <!-- ========================================== -->
+    <div class="min-h-screen bg-slate-50">
+        <!-- Top Navigation Bar -->
+        <nav class="bg-white border-b border-slate-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <!-- Logo -->
+                    <div class="flex items-center">
+                        <div class="bg-primary p-2 rounded-lg">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <span class="ml-2 font-bold text-lg text-dark hidden sm:block">InvoiceSummary</span>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="flex-1 max-w-lg mx-4 hidden md:block">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            <input type="text" class="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-primary focus:border-primary text-sm" placeholder="Cari invoice, pelanggan...">
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="flex items-center">
+                        <button class="bg-primary hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center transition duration-150 shadow-sm">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span class="hidden sm:inline">Buat Invoice Baru</span>
+                            <span class="sm:hidden">Buat</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Filter Bar -->
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+                <h1 class="text-2xl font-bold text-dark">Ringkasan Keuangan</h1>
+                <div class="flex items-center space-x-2">
+                    <select class="border border-slate-200 rounded-lg py-2 pl-3 pr-8 text-sm bg-white focus:ring-primary focus:border-primary">
+                        <option>2024</option>
+                        <option>2023</option>
+                    </select>
+                    <select class="border border-slate-200 rounded-lg py-2 pl-3 pr-8 text-sm bg-white focus:ring-primary focus:border-primary">
+                        <option>Semua Bulan</option>
+                        <option>Januari</option>
+                        <option>Februari</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Top Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Card 1: Total Pendapatan -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-sm font-medium text-slate-500">Total Pendapatan (Paid)</p>
+                        <span class="bg-emerald-50 text-success text-xs font-bold px-2 py-1 rounded-full flex items-center">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                            12.5%
+                        </span>
+                    </div>
+                    <div class="text-3xl font-extrabold text-dark tracking-tight">Rp 124.500.000</div>
+                </div>
+                <!-- Card 2: Total Piutang -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-sm font-medium text-slate-500">Total Piutang (Unpaid)</p>
+                        <span class="bg-amber-50 text-warning p-1 rounded-full">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        </span>
+                    </div>
+                    <div class="text-3xl font-extrabold text-dark tracking-tight">Rp 45.200.000</div>
+                </div>
+                <!-- Card 3: Total Volume Invoice -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <p class="text-sm font-medium text-slate-500">Total Volume Invoice</p>
+                        <span class="bg-slate-100 text-slate-600 p-1 rounded-full">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </span>
+                    </div>
+                    <div class="text-3xl font-extrabold text-dark tracking-tight">142</div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Side: Graph -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-dark mb-4">Grafik Pendapatan Bulanan</h3>
+                    <div class="h-72 w-full">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Right Side: Recent Invoices -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h3 class="text-lg font-bold text-dark mb-4">Invoice Terbaru</h3>
+                    <div class="flex-1 space-y-4">
+                        <!-- Item 1 -->
+                        <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                            <div>
+                                <p class="font-semibold text-sm text-dark">INV-2024-001</p>
+                                <p class="text-xs text-slate-500">PT Maju Jaya Abadi</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-sm text-dark">Rp 5.250.000</p>
+                                <span class="text-xs bg-emerald-50 text-success px-2 py-0.5 rounded-full font-medium mt-1 inline-block">PAID</span>
+                            </div>
+                        </div>
+                        <!-- Item 2 -->
+                        <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                            <div>
+                                <p class="font-semibold text-sm text-dark">INV-2024-002</p>
+                                <p class="text-xs text-slate-500">CV Sumber Rejeki</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-sm text-dark">Rp 12.000.000</p>
+                                <span class="text-xs bg-amber-50 text-warning px-2 py-0.5 rounded-full font-medium mt-1 inline-block">UNPAID</span>
+                            </div>
+                        </div>
+                        <!-- Item 3 -->
+                        <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                            <div>
+                                <p class="font-semibold text-sm text-dark">INV-2024-003</p>
+                                <p class="text-xs text-slate-500">Toko Elektronik Sentosa</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-sm text-dark">Rp 3.750.000</p>
+                                <span class="text-xs bg-emerald-50 text-success px-2 py-0.5 rounded-full font-medium mt-1 inline-block">PAID</span>
+                            </div>
+                        </div>
+                        <!-- Item 4 -->
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold text-sm text-dark">INV-2024-004</p>
+                                <p class="text-xs text-slate-500">PT Cahaya Mandiri</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-sm text-dark">Rp 8.100.000</p>
+                                <span class="text-xs bg-amber-50 text-warning px-2 py-0.5 rounded-full font-medium mt-1 inline-block">UNPAID</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Download Button -->
+                    <button class="w-full mt-6 bg-dark hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-sm flex items-center justify-center transition duration-150 shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Unduh Rekap Laporan (PDF)
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Separator -->
+    <div class="bg-dark text-white text-center py-2 text-xs font-medium tracking-widest uppercase">Invoice Management Preview</div>
+
+    <!-- ========================================== -->
+    <!-- SECTION 3: INVOICE LIST PAGE               -->
+    <!-- ========================================== -->
+    <div class="min-h-screen bg-slate-50">
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- Page Header -->
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-dark">Daftar Invoice</h1>
+                    <p class="text-sm text-slate-500">Kelola dan pantau seluruh tagihan pelanggan</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium px-4 py-2 rounded-lg text-sm flex items-center shadow-sm transition duration-150">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                        Filter
+                    </button>
+                    <button class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-medium px-4 py-2 rounded-lg text-sm flex items-center shadow-sm transition duration-150">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Export Excel
+                    </button>
+                    <button class="bg-primary hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center shadow-sm transition duration-150">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Invoice Baru
+                    </button>
+                </div>
+            </div>
+
+            <!-- Control & Search Bar -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                    <div class="relative w-full md:max-w-xs">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input type="text" class="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-primary focus:border-primary text-sm" placeholder="Cari No. Invoice / Pelanggan">
+                    </div>
+                    <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg overflow-x-auto">
+                        <button class="px-4 py-1.5 text-sm font-semibold text-white bg-primary rounded-md shadow-sm whitespace-nowrap">Semua</button>
+                        <button class="px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-dark rounded-md whitespace-nowrap">Dibayar</button>
+                        <button class="px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-dark rounded-md whitespace-nowrap">Belum Dibayar</button>
+                        <button class="px-4 py-1.5 text-sm font-medium text-slate-600 hover:text-dark rounded-md whitespace-nowrap">Batal</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">No. Invoice</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Pelanggan</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tanggal Terbit</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Jatuh Tempo</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Tagihan</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Akses/Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-100">
+                            <!-- Row 1 -->
+                            <tr class="hover:bg-slate-50 transition duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary">INV-2024-001</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">PT Maju Jaya Abadi</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">01/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">15/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-dark text-right">Rp 5.250.000</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-50 text-success">PAID</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <button class="text-slate-500 hover:text-primary" title="Lihat Detail">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-primary" title="Unduh PDF">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-warning" title="Tandai Lunas">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Row 2 -->
+                            <tr class="hover:bg-slate-50 transition duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary">INV-2024-002</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">CV Sumber Rejeki</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">03/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">17/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-dark text-right">Rp 12.000.000</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-50 text-warning">UNPAID</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <button class="text-slate-500 hover:text-primary" title="Lihat Detail">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-primary" title="Unduh PDF">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-warning" title="Tandai Lunas">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Row 3 -->
+                            <tr class="hover:bg-slate-50 transition duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary">INV-2024-003</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">Toko Elektronik Sentosa</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">05/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">19/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-dark text-right">Rp 3.750.000</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-50 text-success">PAID</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <button class="text-slate-500 hover:text-primary" title="Lihat Detail">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-primary" title="Unduh PDF">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-warning" title="Tandai Lunas">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Row 4 -->
+                            <tr class="hover:bg-slate-50 transition duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-primary">INV-2024-004</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">PT Cahaya Mandiri</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">08/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">22/10/2024</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-dark text-right">Rp 8.100.000</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-50 text-warning">UNPAID</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <button class="text-slate-500 hover:text-primary" title="Lihat Detail">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-primary" title="Unduh PDF">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        </button>
+                                        <button class="text-slate-500 hover:text-warning" title="Tandai Lunas">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Footer -->
+                <div class="bg-white px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p class="text-sm text-slate-500">Menampilkan <span class="font-semibold text-dark">1-10</span> dari <span class="font-semibold text-dark">142</span> invoice</p>
+                    <div class="flex items-center space-x-2">
+                        <button class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center" disabled>
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            Previous
+                        </button>
+                        <button class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm text-dark hover:bg-slate-50 flex items-center">
+                            Next
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- SCRIPTS                                    -->
+    <!-- ========================================== -->
+    <script>
+        // Password Toggle Functionality
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>';
+            } else {
+                passwordInput.type = 'password';
+                eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+            }
+        }
+
+        // Chart.js Integration
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+
+            // Gradient for Bars
+            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, '#2563eb');
+            gradient.addColorStop(1, 'rgba(37, 99, 235, 0.1)');
+
+            const revenueChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Pendapatan (Juta Rp)',
+                        data: [65, 75, 80, 72, 90, 105, 95, 110, 98, 120, 115, 124],
+                        backgroundColor: gradient,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleFont: { family: 'Inter', weight: 'bold' },
+                            bodyFont: { family: 'Inter' },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += 'Rp ' + context.parsed.y + '.000.000';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 12 },
+                                callback: function(value) {
+                                    return 'Rp ' + value + 'jt';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false,
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: { family: 'Inter', size: 12, weight: '500' }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
