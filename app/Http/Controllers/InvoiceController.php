@@ -127,6 +127,7 @@ class InvoiceController extends Controller
             'payment_note',
             'invoice_title',
             'invoice_subtitle',
+            'signature_image',
         ]);
 
         $pdf = Pdf::loadView('invoices.pdf', [
@@ -137,7 +138,8 @@ class InvoiceController extends Controller
 
         $filename = str_replace(['/', '\\'], '-', $invoice->invoice_number).'.pdf';
 
-        return $pdf->download($filename);
+        // return $pdf->download($filename);
+        return $pdf->stream($filename);
     }
 
     public function markAsPaid(Invoice $invoice): RedirectResponse

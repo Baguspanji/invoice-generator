@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="utf-8">
     <title>{{ $invoice->invoice_number }}</title>
@@ -10,13 +11,17 @@
             font-weight: normal;
             src: url('{{ storage_path('fonts/Nunito-Regular.ttf') }}') format('truetype');
         }
+
         @font-face {
             font-family: 'Nunito';
             font-style: normal;
             font-weight: bold;
             src: url('{{ storage_path('fonts/Nunito-Bold.ttf') }}') format('truetype');
         }
-        @page { margin: 36px 44px 60px 44px; }
+
+        @page {
+            margin: 36px 44px 60px 44px;
+        }
 
         body {
             font-family: 'Nunito', Helvetica, Arial, sans-serif;
@@ -26,94 +31,245 @@
         }
 
         /* ===== Header ===== */
-        .header { width: 100%; border-collapse: collapse; }
-        .header td { vertical-align: top; padding: 0; }
-        .brand-name { font-size: 17pt; font-weight: bold; color: #0f172a; margin: 0; }
-        .brand-sub { font-size: 9pt; color: #64748b; margin: 2px 0 0 0; }
+        .header {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header td {
+            vertical-align: top;
+            padding: 0;
+        }
+
+        .brand-name {
+            font-size: 17pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 0;
+        }
+
+        .brand-sub {
+            font-size: 9pt;
+            color: #64748b;
+            margin: 0;
+        }
+
         .invoice-title {
             font-size: 30pt;
             font-weight: bold;
             color: #0f172a;
             margin: 0;
             text-align: right;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
         }
-        .invoice-number { font-size: 10pt; color: #2563eb; text-align: right; margin: 2px 0 0 0; font-weight: bold; }
-        .accent-bar { height: 4px; background: #2563eb; margin: 14px 0 0 0; }
+
+        .invoice-number {
+            font-size: 10pt;
+            color: #2563eb;
+            text-align: right;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .accent-bar {
+            height: 4px;
+            background: #2563eb;
+            margin: 14px 0 0 0;
+        }
 
         /* ===== Info boxes ===== */
-        .info-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-        .info-table td { vertical-align: top; padding: 0; }
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 18px;
+        }
+
+        .info-table td {
+            vertical-align: top;
+            padding: 0;
+        }
+
         .box {
             background: #f1f5f9;
             border-top: 3px solid #2563eb;
             border-radius: 0 0 12px 12px;
             padding: 10px 14px;
         }
-        .box-label { font-size: 8.5pt; font-weight: bold; color: #2563eb; margin: 0 0 6px 0; letter-spacing: 1px; }
-        .box-name { font-size: 11.5pt; font-weight: bold; color: #0f172a; margin: 0 0 4px 0; }
-        .box p { margin: 0; font-size: 9.5pt; color: #475569; }
-        .meta-table { border-collapse: collapse; margin-left: auto; }
-        .meta-table td { padding: 3px 0 3px 10px; font-size: 9.5pt; vertical-align: top; }
-        .meta-table .meta-label { color: #64748b; text-align: right; }
-        .meta-table .meta-value { color: #0f172a; font-weight: bold; text-align: right; }
+
+        .box-label {
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: #2563eb;
+            margin: 0 0 6px 0;
+            letter-spacing: 1px;
+        }
+
+        .box-name {
+            font-size: 11.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin: 0 0 4px 0;
+        }
+
+        .box p {
+            margin: 0;
+            padding: 0;
+            font-size: 9.5pt;
+            color: #475569;
+            line-height: 1;
+        }
+
+        .meta-table {
+            border-collapse: collapse;
+            margin-left: auto;
+        }
+
+        .meta-table td {
+            padding: 1px 0 1px 10px;
+            font-size: 9.5pt;
+            vertical-align: top;
+            line-height: 1.35;
+        }
+
+        .meta-table .meta-label {
+            color: #64748b;
+            text-align: right;
+        }
+
+        .meta-table .meta-value {
+            color: #0f172a;
+            font-weight: bold;
+            text-align: right;
+        }
+
         .status {
             display: inline-block;
-            padding: 2px 12px;
+            vertical-align: middle;
             font-size: 9pt;
             font-weight: bold;
             border-radius: 20px;
+            padding: 0 10px;
         }
-        .status-paid { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-        .status-unpaid { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
-        .status-cancelled { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+        .status-paid {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+
+        .status-unpaid {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fcd34d;
+        }
+
+        .status-cancelled {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+        }
 
         /* ===== Items ===== */
         .section-title {
             font-size: 11pt;
             font-weight: bold;
             color: #0f172a;
-            margin: 26px 0 0 0;
+            margin: 0;
             padding-bottom: 6px;
             border-bottom: 2px solid #e2e8f0;
         }
+
         table.items {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            margin-top: 10px;
+            margin-top: 8px;
             border: 1px solid #dbe3ef;
             border-radius: 12px;
         }
+
         table.items th {
             background: #2563eb;
             color: #ffffff;
             font-size: 9pt;
-            padding: 10px 12px;
+            padding: 0px 10px 4px 10px;
             text-align: left;
             letter-spacing: 0.5px;
             border: none;
         }
-        table.items th.r-tl { border-radius: 11px 0 0 0; }
-        table.items th.r-tr { border-radius: 0 11px 0 0; }
+
+        table.items th.r-tl {
+            border-radius: 11px 0 0 0;
+        }
+
+        table.items th.r-tr {
+            border-radius: 0 11px 0 0;
+        }
+
         table.items td {
-            padding: 10px 12px;
+            padding: 4px 10px;
             font-size: 9.5pt;
+            line-height: 1;
             border-top: 1px solid #e8eef7;
         }
-        table.items tr.alt td { background: #f3f7fd; }
-        table.items tr.last td { border-bottom: none; }
-        table.items tr.last td.r-bl { border-radius: 0 0 0 11px; }
-        table.items tr.last td.r-br { border-radius: 0 0 11px 0; }
-        .col-no { width: 34px; text-align: center; color: #64748b; }
-        .col-qty { width: 70px; text-align: center; }
-        .col-money { width: 120px; text-align: right; white-space: nowrap; }
-        .item-name { font-weight: bold; color: #0f172a; }
-        .item-cat { font-size: 8.5pt; color: #64748b; }
+
+        table.items tr.alt td {
+            background: #f3f7fd;
+        }
+
+        table.items tr.last td {
+            border-bottom: none;
+        }
+
+        table.items tr.last td.r-bl {
+            border-radius: 0 0 0 11px;
+        }
+
+        table.items tr.last td.r-br {
+            border-radius: 0 0 11px 0;
+        }
+
+        .col-no {
+            width: 34px;
+            text-align: center;
+            color: #64748b;
+        }
+
+        .col-qty {
+            width: 70px;
+            text-align: center;
+        }
+
+        .col-money {
+            width: 120px;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .item-name {
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .item-cat {
+            font-size: 8pt;
+            color: #64748b;
+            line-height: 1.2;
+        }
 
         /* ===== Totals ===== */
-        .totals-wrap { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        .totals-wrap td { vertical-align: top; padding: 0; }
+        .totals-wrap {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        .totals-wrap td {
+            vertical-align: top;
+            padding: 0;
+            line-height: 0.65;
+        }
+
         .terbilang-box {
             background: #eff6ff;
             border-left: 3px solid #2563eb;
@@ -122,13 +278,41 @@
             font-size: 9pt;
             font-style: italic;
             color: #1e40af;
+            line-height: 1.2;
         }
-        table.totals { border-collapse: collapse; margin-left: auto; width: 280px; }
-        table.totals td { padding: 5px 10px; font-size: 9.5pt; }
-        table.totals .t-label { color: #64748b; }
-        table.totals .t-value { text-align: right; font-weight: bold; color: #0f172a; white-space: nowrap; }
-        table.totals tr.grand td { background: #0f172a; color: #ffffff; font-size: 11pt; padding: 9px 10px; }
-        table.totals tr.grand .t-label { color: #ffffff; }
+
+        table.totals {
+            border-collapse: collapse;
+            margin-left: auto;
+            width: 280px;
+        }
+
+        table.totals td {
+            padding: 5px 10px;
+            font-size: 9.5pt;
+        }
+
+        table.totals .t-label {
+            color: #64748b;
+        }
+
+        table.totals .t-value {
+            text-align: right;
+            font-weight: bold;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+
+        table.totals tr.grand td {
+            background: #0f172a;
+            color: #ffffff;
+            font-size: 11pt;
+            padding: 9px 10px;
+        }
+
+        table.totals tr.grand .t-label {
+            color: #ffffff;
+        }
 
         /* ===== Payment ===== */
         .payment-box {
@@ -139,15 +323,57 @@
             padding: 12px 16px;
             margin-top: 10px;
         }
-        .payment-box table td { padding: 2px 8px 2px 0; font-size: 9.5pt; vertical-align: top; }
-        .payment-note { font-size: 9pt; font-style: italic; color: #475569; margin: 8px 0 0 0; }
+
+        .payment-box table td {
+            padding: 2px 8px 2px 0;
+            font-size: 9.5pt;
+            vertical-align: top;
+            line-height: .65;
+        }
+
+        .payment-note {
+            font-size: 9pt;
+            font-style: italic;
+            color: #475569;
+            margin: 8px 0 0 0;
+        }
 
         /* ===== Signature & footer ===== */
-        .sign-table { width: 100%; border-collapse: collapse; margin-top: 36px; }
-        .sign-table td { vertical-align: top; }
-        .sign-block { text-align: center; font-size: 10pt; }
-        .sign-name { font-weight: bold; margin-top: 64px; color: #0f172a; }
-        .sign-role { font-size: 9pt; color: #64748b; }
+        .sign-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 36px;
+        }
+
+        .sign-table td {
+            vertical-align: top;
+        }
+
+        .sign-block {
+            text-align: center;
+            font-size: 10pt;
+        }
+
+        .sign-image {
+            height: 55px;
+            margin: 6px 0 2px 0;
+        }
+
+        .sign-name {
+            font-weight: bold;
+            margin-top: 0px;
+            color: #0f172a;
+        }
+
+        .sign-name.no-image {
+            margin-top: 64px;
+        }
+
+        .sign-role {
+            font-size: 9pt;
+            color: #64748b;
+        }
+
         .footer {
             position: fixed;
             bottom: -40px;
@@ -159,13 +385,21 @@
             border-top: 1px solid #e2e8f0;
             padding-top: 6px;
         }
-        .footer .pagenum:before { content: counter(page); }
+
+        .footer .pagenum:before {
+            content: counter(page);
+        }
+
+        .footer .pagecount:before {
+            content: counter(pages);
+        }
     </style>
 </head>
+
 <body>
     <div class="footer">
         {{ $settings['sender_name'] ?? '' }} &bull; {{ $invoice->invoice_number }} &bull;
-        Halaman <span class="pagenum"></span>
+        Halaman <span class="pagenum"></span> dari <span class="pagecount"></span>
     </div>
 
     <!-- Header -->
@@ -229,8 +463,16 @@
                         <td class="meta-label">Status</td>
                         <td class="meta-value">
                             @php
-                                $statusValue = $invoice->status instanceof \BackedEnum ? $invoice->status->value : $invoice->status;
-                                $statusClass = $statusValue === 'PAID' ? 'status-paid' : ($statusValue === 'UNPAID' ? 'status-unpaid' : 'status-cancelled');
+                                $statusValue =
+                                    $invoice->status instanceof \BackedEnum
+                                        ? $invoice->status->value
+                                        : $invoice->status;
+                                $statusClass =
+                                    $statusValue === 'PAID'
+                                        ? 'status-paid'
+                                        : ($statusValue === 'UNPAID'
+                                            ? 'status-unpaid'
+                                            : 'status-cancelled');
                             @endphp
                             <span class="status {{ $statusClass }}">{{ $statusValue }}</span>
                         </td>
@@ -252,8 +494,8 @@
                 <th class="col-no r-tl">NO</th>
                 <th>KETERANGAN</th>
                 <th class="col-qty" style="text-align: center;">QTY</th>
-                <th class="col-money">HARGA</th>
-                <th class="col-money r-tr">TOTAL</th>
+                <th class="col-money" style="text-align: right;">HARGA</th>
+                <th class="col-money" style="text-align: right;">TOTAL</th>
             </tr>
         </thead>
         <tbody>
@@ -268,7 +510,8 @@
                     </td>
                     <td class="col-qty">{{ $item->quantity }}</td>
                     <td class="col-money">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                    <td class="col-money{{ $loop->last ? ' r-br' : '' }}">Rp {{ number_format($item->total_price, 0, ',', '.') }}</td>
+                    <td class="col-money{{ $loop->last ? ' r-br' : '' }}">Rp
+                        {{ number_format($item->total_price, 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -289,7 +532,8 @@
                     @if ((float) $invoice->discount_amount > 0)
                         <tr>
                             <td class="t-label">Diskon</td>
-                            <td class="t-value">&minus; Rp {{ number_format($invoice->discount_amount, 0, ',', '.') }}</td>
+                            <td class="t-value">&minus; Rp {{ number_format($invoice->discount_amount, 0, ',', '.') }}
+                            </td>
                         </tr>
                     @endif
                     @if ((float) $invoice->tax_amount > 0)
@@ -324,7 +568,8 @@
                 <td><strong>{{ $settings['bank_account_name'] ?? '-' }}</strong></td>
             </tr>
         </table>
-        <p class="payment-note">{{ $settings['payment_note'] ?? '' }} Nomor Invoice ({{ $invoice->invoice_number }}).</p>
+        <p class="payment-note">{{ $settings['payment_note'] ?? '' }} Nomor Invoice ({{ $invoice->invoice_number }}).
+        </p>
     </div>
 
     <!-- Signature -->
@@ -334,10 +579,15 @@
             <td style="width: 45%;">
                 <div class="sign-block">
                     <div>Hormat saya,</div>
-                    <div class="sign-name">{{ $settings['sender_name'] ?? '' }}</div>
+                    @if (!empty($settings['signature_image']))
+                        <img src="{{ $settings['signature_image'] }}" alt="Signature" class="sign-image">
+                    @endif
+                    <div class="sign-name{{ empty($settings['signature_image']) ? ' no-image' : '' }}">
+                        {{ $settings['sender_name'] ?? '' }}</div>
                 </div>
             </td>
         </tr>
     </table>
 </body>
+
 </html>

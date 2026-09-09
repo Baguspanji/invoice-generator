@@ -83,3 +83,28 @@ test('pengaturan dapat diperbarui dan dipakai PDF', function () {
 
     $this->actingAs($user)->get(route('settings.edit'))->assertOk();
 });
+
+test('tanda tangan base64 tersimpan dan tampil pada PDF', function () {
+    $user = User::factory()->create();
+    $signature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+    $this->actingAs($user)->put(route('settings.update'), [
+        'settings' => ['signature_image' => $signature],
+    ])->assertRedirect();
+
+    expect(Setting::get('signature_image'))->toBe($signature);
+
+    $invoice = Invoice::factory()->create();
+
+    $html = view('invoices.pdf', [
+        'invoice' => $invoice->load(['customer', 'items']),
+        'settings' => Setting::getMany(['sender_name', 'signature_image']),
+        'terbilang' => Terbilang::make($invoice->total_amount),
+    ])->render();
+
+    expect($html)->toContain($signature);
+
+    $this->actingAs($user)
+        ->get(route('invoices.pdf', $invoice))
+        ->assertOk();
+});

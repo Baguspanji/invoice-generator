@@ -28,6 +28,9 @@ class SettingSeeder extends Seeder
             // Judul dokumen.
             'invoice_title' => 'INVOICE',
             'invoice_subtitle' => 'TAGIHAN PENGEMBANGAN APLIKASI',
+
+            // Tanda tangan pengirim (base64 PNG dari canvas halaman pengaturan).
+            'signature_image' => null,
         ];
 
         foreach ($defaults as $key => $value) {
