@@ -16,10 +16,17 @@ class DashboardController extends Controller
         $selectedMonth = $request->query('month', '');
 
         $yearExpression = $this->datePartExpression('year', 'invoice_date');
+        $paidYearExpression = $this->datePartExpression('year', 'paid_at');
 
+        // Tahun terpilih digabung dari invoice_date (dokumen terbit) dan paid_at (uang masuk),
+        // supaya periode pendapatan yang tidak berimpit dengan periode penerbitan tetap bisa dipilih.
         $years = Invoice::selectRaw("DISTINCT {$yearExpression} as year")
-            ->orderByDesc('year')
             ->pluck('year')
+            ->merge(
+                Invoice::whereNotNull('paid_at')
+                    ->selectRaw("DISTINCT {$paidYearExpression} as year")
+                    ->pluck('year')
+            )
             ->map(fn ($year): int => (int) $year)
             ->push((int) date('Y'))
             ->unique()
@@ -42,8 +49,10 @@ class DashboardController extends Controller
             12 => 'Desember',
         ];
 
-        $totalRevenue = Invoice::whereYear('invoice_date', $selectedYear)
-            ->when($selectedMonth !== '', fn ($query) => $query->whereMonth('invoice_date', (int) $selectedMonth))
+        // Pendapatan = arus kas masuk, jadi dikelompokkan dari paid_at.
+        // Piutang & jumlah invoice = dokumen terbit, jadi dikelompokkan dari invoice_date.
+        $totalRevenue = Invoice::whereYear('paid_at', $selectedYear)
+            ->when($selectedMonth !== '', fn ($query) => $query->whereMonth('paid_at', (int) $selectedMonth))
             ->where('status', InvoiceStatus::PAID)
             ->sum('total_amount');
 
@@ -56,7 +65,7 @@ class DashboardController extends Controller
             ->when($selectedMonth !== '', fn ($query) => $query->whereMonth('invoice_date', (int) $selectedMonth))
             ->count();
 
-        $previousRevenue = Invoice::whereYear('invoice_date', $selectedYear - 1)
+        $previousRevenue = Invoice::whereYear('paid_at', $selectedYear - 1)
             ->where('status', InvoiceStatus::PAID)
             ->sum('total_amount');
 

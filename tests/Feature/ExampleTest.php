@@ -1,7 +1,9 @@
 <?php
 
-test('the application redirects root to dashboard', function () {
+test('halaman welcome dapat ditampilkan untuk tamu', function () {
     $response = $this->get('/');
 
-    $response->assertRedirect('/dashboard');
+    $response->assertOk();
+    $response->assertSee('Auto-Invoice Engine');
+    $response->assertSee('Revenue Summary');
 });

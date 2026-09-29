@@ -24,8 +24,9 @@ Sistem ini dibuat untuk mencatat transaksi, menerbitkan file E-Invoice (PDF) sec
 
 
 2. **Status Invoice:**
-* `Unpaid` $\rightarrow$ `Paid` $\rightarrow$ `Cancelled`.
-* Pencatatan tanggal pembayaran saat status diubah menjadi `Paid`.
+* `Unpaid` $\rightarrow$ `Paid` **atau** `Unpaid` $\rightarrow$ `Cancelled` (dua cabang, bukan dua tahap berurutan).
+* `Paid` bersifat final: invoice yang sudah dibayar **tidak dapat** dibatalkan, karena `paid_at` menjadi dasar perhitungan pendapatan dan pembatalan sepulang akan menghapus pendapatan yang sudah terekam.
+* Pencatatan tanggal pembayaran (`paid_at`) saat status diubah menjadi `Paid`.
 
 
 3. **Background PDF & Storage (Cloudflare R2):**
@@ -40,9 +41,11 @@ Sistem ini dibuat untuk mencatat transaksi, menerbitkan file E-Invoice (PDF) sec
 ### Modul B: Revenue Summary & Reporting (Ringkasan Pendapatan)
 
 1. **Dashboard Indikator Utama (KPI):**
-* **Total Pendapatan (Paid):** Total uang masuk dari invoice berstatus `Paid`.
-* **Total Piutang (Unpaid):** Total tagihan yang belum dibayar.
-* **Jumlah Invoice Terbit:** Statistik total invoice bulan/tahun ini.
+* **Total Pendapatan (Paid):** Total uang masuk dari invoice berstatus `Paid`, **dikelompokkan berdasarkan `paid_at`** (tanggal pembayaran), bukan `invoice_date`.
+* **Total Piutang (Unpaid):** Total tagihan yang belum dibayar, dikelompokkan berdasarkan `invoice_date` (saat invoice terbit) — piutang adalah kewajiban yang lahir dari penerbitan invoice.
+* **Jumlah Invoice Terbit:** Statistik total invoice berdasarkan `invoice_date` periode terpilih.
+
+  > **Catatan konsistensi:** metrik yang merepresentasi arus kas masuk memakai `paid_at`; metrik yang merepresentasi dokumen terbit memakai `invoice_date`. Filter periode dashboard harus mengikuti sumber tanggal masing-masing agar KPI dan grafik bulanan selalu konsisten.
 
 
 2. **Ringkasan Pendapatan Periodik:**
@@ -52,6 +55,7 @@ Sistem ini dibuat untuk mencatat transaksi, menerbitkan file E-Invoice (PDF) sec
 
 3. **Ekspor Laporan Pendapatan:**
 * Ekspor ringkasan pendapatan ke file **Excel (.xlsx)** atau **PDF** untuk periode tertentu secara instan.
+* Format tambahan di luar kebutuhan minimum: **CSV** (`GET /reports/export`) dan **rekap PDF** (`GET /reports/recap`) — keduanya adalah turunan dari data yang sama, bukan fitur baru.
 
 
 
@@ -130,12 +134,26 @@ CREATE TABLE invoice_items (
 
 ─────────────────────────────────────────────────────────────────────────
 
-[ Pembayaran Diterima ] ──► Update Status: PAID & Set paid_at = NOW()
+[ Invoice UNPAID ]
         │
-        ▼
-[ Summary Pendapatan / Dashboard Otomatis Terupdate ]
-
+        ├──► [ Status: CANCELLED ]  (hanya dari UNPAID)
+        │
+        └──► [ Status: PAID ] ──► paid_at = NOW()
+                        │
+                        ▼
+          [ Summary Pendapatan / Dashboard Terupdate ]
+                        │   (dihitung dari paid_at)
 ```
+
+**Transisi status:**
+
+| Dari | Ke | Endpoint | Syarat |
+| --- | --- | --- | --- |
+| `UNPAID` | `PAID` | `POST /invoices/{invoice}/pay` | `EnsureInvoiceIsUnpaid` |
+| `UNPAID` | `CANCELLED` | `POST /invoices/{invoice}/cancel` | `EnsureInvoiceIsUnpaid` |
+| `PAID` | — | — | final, tidak dapat diubah |
+
+> **Catatan konsistensi:** `Cancelled` adalah pembatalan invoice yang belum dibayar, bukan pembatalan invoice lunas. Invoice `PAID` tidak punya jalur ke `CANCELLED` karena `paid_at` sudah tercatat dan membatalkannya akan menghapus pendapatan yang sudah masuk rekap. Jika di masa depan dibutuhkan *credit note* atau *refund*, buat status/entitas baru (mis. `REFUNDED`) beserta kolom penyeimbangnya — jangan longgarkan aturan `PAID → CANCELLED`.
 
 ---
 
@@ -143,19 +161,25 @@ CREATE TABLE invoice_items (
 
 ### A. Query Summary Pendapatan Bulanan (Cepat & Ringan)
 
-Untuk mendapatkan summary pendapatan per bulan tanpa membebani server:
+Untuk mendapatkan summary pendapatan per bulan tanpa membebani server. Pendapatan dijumlahkan berdasarkan `paid_at` (tanggal uang masuk), bukan `invoice_date`:
 
 ```php
+use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\DB;
 
+// Ekspresi tanggal harus sadar-driver agar query yang sama jalan di MySQL & SQLite.
+$monthExpression = DB::getDriverName() === 'sqlite'
+    ? "strftime('%m', paid_at)"
+    : 'MONTH(paid_at)';
+
 // Mendapatkan total pendapatan per bulan di tahun berjalan
 $monthlyRevenue = Invoice::select(
-        DB::raw("DATE_FORMAT(paid_at, '%Y-%m') as month"),
-        DB::raw("SUM(total_amount) as total_revenue"),
-        DB::raw("COUNT(id) as total_invoices")
+        DB::raw($monthExpression.' as month'),
+        DB::raw('SUM(total_amount) as total_revenue'),
+        DB::raw('COUNT(id) as total_invoices')
     )
-    ->where('status', 'PAID')
+    ->where('status', InvoiceStatus::PAID)
     ->whereYear('paid_at', date('Y'))
     ->groupBy('month')
     ->orderBy('month', 'ASC')

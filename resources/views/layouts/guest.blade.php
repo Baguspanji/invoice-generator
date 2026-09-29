@@ -31,15 +31,19 @@
     <div class="absolute right-4 top-4">
         <x-theme-toggle />
     </div>
-    <div class="flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div class="w-full max-w-md">
-            <div class="mb-8 text-center">
-                <div class="mb-4 inline-flex items-center justify-center">
-                    <x-app-logo size="lg" />
+    <div class="flex min-h-screen flex-col items-center @yield('align', 'justify-center') px-4 py-12 sm:px-6 lg:px-8">
+        <div class="w-full @yield('container', 'max-w-md')">
+            @hasSection('hero')
+                @yield('hero')
+            @else
+                <div class="mb-8 text-center">
+                    <div class="mb-4 inline-flex items-center justify-center">
+                        <x-app-logo size="lg" />
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-dark dark:text-white">IceSum</h1>
+                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">@yield('subtitle', 'Masuk ke Dashboard Keuangan')</p>
                 </div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-dark dark:text-white">IceSum</h1>
-                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">@yield('subtitle', 'Masuk ke Dashboard Keuangan')</p>
-            </div>
+            @endif
 
             @yield('content')
         </div>

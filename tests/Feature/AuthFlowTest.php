@@ -7,10 +7,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('root URL mengarah ke dashboard', function () {
+test('root URL menampilkan landing page untuk tamu', function () {
     $response = $this->get('/');
 
-    $response->assertRedirect('/dashboard');
+    $response->assertOk();
+    $response->assertSee('Invoice otomatis, rekap pendapatan instan');
+    $response->assertSee('Masuk ke Sistem');
+});
+
+test('root URL mengarahkan pengguna terotentikasi ke dashboard', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/')
+        ->assertRedirect(route('dashboard'));
 });
 
 test('tamu diarahkan ke login saat membuka halaman terproteksi', function () {
