@@ -16,7 +16,13 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    completedCount: {
+        type: Number,
+        default: 0,
+    },
 });
+
+const showCompleted = defineModel('showCompleted', { default: false });
 
 defineEmits(['reset']);
 </script>
@@ -68,6 +74,16 @@ defineEmits(['reset']);
                     <option value="invoiced">Invoiced</option>
                     <option value="non_billable">Non-billable</option>
                 </select> -->
+
+                <button v-if="completedCount > 0" type="button" @click="showCompleted = !showCompleted"
+                    class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition"
+                    :class="showCompleted
+                        ? 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400'"
+                    :title="showCompleted ? 'Sembunyikan task selesai' : 'Tampilkan task selesai'">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {{ showCompleted ? `Sembunyikan selesai (${completedCount})` : `Tampilkan selesai (${completedCount})` }}
+                </button>
 
                 <button v-if="hasActiveFilters" type="button" @click="$emit('reset')"
                     class="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">

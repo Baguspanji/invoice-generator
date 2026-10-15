@@ -8,6 +8,7 @@ import TaskKanbanView from './TaskKanbanView.vue';
 import TaskCreateModal from './TaskCreateModal.vue';
 import TaskEditModal from './TaskEditModal.vue';
 import InvoiceGenerateModal from './InvoiceGenerateModal.vue';
+import { isTaskCompleted } from './utils';
 
 const props = defineProps({
     config: {
@@ -33,6 +34,16 @@ const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showInvoiceModal = ref(false);
 const selectedTask = ref(null);
+
+// Completed tasks hidden by default, toggleable via UI
+const showCompleted = ref(false);
+
+const completedCount = computed(() => {
+    return taskGroups.value.reduce(
+        (sum, g) => sum + (g.tasks || []).filter(isTaskCompleted).length,
+        0
+    );
+});
 
 // Live filters for List View
 const filters = reactive({
@@ -91,7 +102,11 @@ function matchesFilter(task) {
 }
 
 function filteredTasks(group) {
-    return (group.tasks || []).filter(matchesFilter);
+    return (group.tasks || []).filter(t => (showCompleted.value || !isTaskCompleted(t)) && matchesFilter(t));
+}
+
+function visibleBoardTasks(group) {
+    return (group.tasks || []).filter(t => showCompleted.value || !isTaskCompleted(t));
 }
 
 function openEditModal(task) {
@@ -187,7 +202,7 @@ async function handleDragEnd(evt) {
     }
 }
 
-watch([viewMode, hasActiveFilters], () => {
+watch([viewMode, hasActiveFilters, showCompleted], () => {
     // Sync URL mode without reload
     const url = new URL(window.location.href);
     url.searchParams.set('view', viewMode.value);
@@ -220,6 +235,8 @@ onMounted(() => {
                 :has-active-filters="hasActiveFilters"
                 :users="users"
                 :labels="labels"
+                :completed-count="completedCount"
+                v-model:show-completed="showCompleted"
                 @reset="resetFilters"
             />
 
@@ -234,8 +251,22 @@ onMounted(() => {
 
         <!-- KANBAN BOARD VIEW -->
         <div v-else>
+            <div v-if="completedCount > 0" class="mb-4 flex justify-end">
+                <button
+                    type="button"
+                    @click="showCompleted = !showCompleted"
+                    class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition"
+                    :class="showCompleted
+                        ? 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-400'">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {{ showCompleted ? `Sembunyikan selesai (${completedCount})` : `Tampilkan selesai (${completedCount})` }}
+                </button>
+            </div>
+
             <TaskKanbanView
                 :task-groups="taskGroups"
+                :visible-tasks="visibleBoardTasks"
                 :cfg="cfg"
                 @edit-task="openEditModal"
             />

@@ -56,6 +56,7 @@
                                 'id' => $att->id,
                                 'file_name' => $att->file_name,
                                 'file_size' => $att->file_size,
+                                'mime_type' => $att->mime_type,
                                 'url' => $att->url(),
                                 'human_size' => $att->humanSize(),
                             ])->values(),

@@ -36,3 +36,14 @@ export function getActiveTimer(task, authUserId) {
 export function totalLoggedMinutes(task) {
     return (task.time_logs || []).reduce((sum, l) => sum + (Number(l.minutes) || 0), 0);
 }
+
+const PREVIEWABLE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+
+export function isPreviewableImage(att) {
+    if (!att) return false;
+    if (typeof att.mime_type === 'string' && att.mime_type.toLowerCase().startsWith('image/')) {
+        return true;
+    }
+    const ext = String(att.file_name || '').split('.').pop()?.toLowerCase() || '';
+    return PREVIEWABLE_IMAGE_EXTENSIONS.includes(ext);
+}

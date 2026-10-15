@@ -1,6 +1,10 @@
 <script setup>
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import FileDropzone from './FileDropzone.vue';
+import AttachmentPreviewModal from './AttachmentPreviewModal.vue';
+import { isPreviewableImage } from './utils';
+
+const preview = ref(null);
 
 const props = defineProps({
     show: {
@@ -199,7 +203,13 @@ watch(() => props.task, (t) => {
                             class="flex items-center justify-between py-1.5 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
                             <div class="flex items-center gap-1.5 truncate mr-2">
                                 <svg class="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                                <a :href="att.url" target="_blank" download class="font-medium text-primary hover:underline truncate">{{ att.file_name }}</a>
+                                <button
+                                    v-if="isPreviewableImage(att)"
+                                    type="button"
+                                    @click="preview = att"
+                                    class="font-medium text-primary hover:underline truncate"
+                                    :title="`${att.file_name} — klik untuk pratinjau`">{{ att.file_name }}</button>
+                                <a v-else :href="att.url" target="_blank" download class="font-medium text-primary hover:underline truncate">{{ att.file_name }}</a>
                                 <span class="text-slate-400 shrink-0">({{ att.human_size || '' }})</span>
                             </div>
                             <form method="POST" :action="`${cfg.urls.tasksBase}/${form.id}/attachments/${att.id}`" onsubmit="return confirm('Hapus lampiran ini?')">
@@ -245,6 +255,8 @@ watch(() => props.task, (t) => {
                     </button>
                 </div>
             </form>
+
+            <AttachmentPreviewModal :attachment="preview" @close="preview = null" />
         </div>
     </div>
 </template>

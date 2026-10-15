@@ -1,13 +1,22 @@
 <script setup>
+import { ref } from 'vue';
 import {
     priorityLabel,
     priorityBadgeClass,
     isTaskCompleted,
+    isPreviewableImage,
 } from './utils';
+import AttachmentPreviewModal from './AttachmentPreviewModal.vue';
+
+const preview = ref(null);
 
 defineProps({
     taskGroups: {
         type: Array,
+        required: true,
+    },
+    visibleTasks: {
+        type: Function,
         required: true,
     },
     cfg: {
@@ -32,7 +41,7 @@ defineEmits(['editTask']);
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">{{ group.name }}</h2>
                 </div>
                 <span class="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                    {{ group.tasks.length }}
+                    {{ visibleTasks(group).length }}
                 </span>
             </div>
 
@@ -41,7 +50,7 @@ defineEmits(['editTask']);
                 class="kanban-tasks-container flex flex-1 flex-col gap-3 min-h-[160px]"
                 :data-group-id="group.id">
                 <div
-                    v-for="task in group.tasks"
+                    v-for="task in visibleTasks(group)"
                     :key="task.id"
                     :data-task-id="task.id"
                     class="rounded-lg border border-slate-200 bg-white p-3.5 shadow-xs transition hover:shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -81,17 +90,27 @@ defineEmits(['editTask']);
 
                     <!-- Attachments Preview -->
                     <div v-if="task.attachments && task.attachments.length" class="mt-2 flex flex-wrap items-center gap-1">
-                        <a
-                            v-for="att in task.attachments"
-                            :key="att.id"
-                            :href="att.url"
-                            target="_blank"
-                            download
-                            class="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 hover:text-primary dark:bg-slate-700 dark:text-slate-300"
-                            :title="att.file_name">
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                            <span class="max-w-[80px] truncate">{{ att.file_name }}</span>
-                        </a>
+                        <template v-for="att in task.attachments" :key="att.id">
+                            <button
+                                v-if="isPreviewableImage(att)"
+                                type="button"
+                                @click="preview = att"
+                                class="inline-flex cursor-pointer items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 hover:text-primary dark:bg-slate-700 dark:text-slate-300"
+                                :title="`${att.file_name} (klik untuk pratinjau)`">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                                <span class="max-w-[80px] truncate">{{ att.file_name }}</span>
+                            </button>
+                            <a
+                                v-else
+                                :href="att.url"
+                                target="_blank"
+                                download
+                                class="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600 hover:text-primary dark:bg-slate-700 dark:text-slate-300"
+                                :title="att.file_name">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                                <span class="max-w-[80px] truncate">{{ att.file_name }}</span>
+                            </a>
+                        </template>
                     </div>
 
                     <!-- Card Footer -->
@@ -126,10 +145,12 @@ defineEmits(['editTask']);
                     </div>
                 </div>
 
-                <div v-if="group.tasks.length === 0" class="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-800">
-                    Kosong
+                <div v-if="visibleTasks(group).length === 0" class="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-800">
+                    {{ group.tasks.length > 0 ? 'Semua task selesai disembunyikan' : 'Kosong' }}
                 </div>
             </div>
         </div>
+
+        <AttachmentPreviewModal :attachment="preview" @close="preview = null" />
     </div>
 </template>

@@ -1,9 +1,14 @@
 <script setup>
+import { ref } from 'vue';
 import {
     priorityLabel,
     priorityBadgeClass,
     isTaskCompleted,
+    isPreviewableImage,
 } from './utils';
+import AttachmentPreviewModal from './AttachmentPreviewModal.vue';
+
+const preview = ref(null);
 
 defineProps({
     taskGroups: {
@@ -137,18 +142,31 @@ defineEmits(['editTask']);
                             <!-- Attachments -->
                             <td class="px-4 py-3">
                                 <div v-if="task.attachments && task.attachments.length" class="flex flex-col gap-1">
-                                    <a v-for="att in task.attachments" :key="att.id" :href="att.url" target="_blank"
-                                        download
-                                        class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                                        :title="`${att.file_name} (${att.human_size || ''})`">
-                                        <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13">
-                                            </path>
-                                        </svg>
-                                        <span class="max-w-[100px] truncate">{{ att.file_name }}</span>
-                                    </a>
+                                    <template v-for="att in task.attachments" :key="att.id">
+                                        <button v-if="isPreviewableImage(att)" type="button" @click="preview = att"
+                                            class="inline-flex cursor-pointer items-center gap-1 text-xs text-primary hover:underline"
+                                            :title="`${att.file_name} (${att.human_size || ''}) — klik untuk pratinjau`">
+                                            <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13">
+                                                </path>
+                                            </svg>
+                                            <span class="max-w-[100px] truncate">{{ att.file_name }}</span>
+                                        </button>
+                                        <a v-else :href="att.url" target="_blank"
+                                            download
+                                            class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                                            :title="`${att.file_name} (${att.human_size || ''})`">
+                                            <svg class="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13">
+                                                </path>
+                                            </svg>
+                                            <span class="max-w-[100px] truncate">{{ att.file_name }}</span>
+                                        </a>
+                                    </template>
                                 </div>
                                 <span v-else class="text-xs text-slate-400 italic">-</span>
                             </td>
@@ -211,5 +229,7 @@ defineEmits(['editTask']);
                 </table>
             </div>
         </div>
+
+        <AttachmentPreviewModal :attachment="preview" @close="preview = null" />
     </div>
 </template>

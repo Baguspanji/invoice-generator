@@ -57,6 +57,19 @@ return [
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
             'prefix' => '',
             'prefix_indexes' => true,
+        ],
+
+        'laracollab' => [
+            'driver' => 'mysql',
+            'host' => env('LARACOLLAB_DB_HOST', '127.0.0.1'),
+            'port' => env('LARACOLLAB_DB_PORT', '3306'),
+            'database' => env('LARACOLLAB_DB_DATABASE', 'laracollab'),
+            'username' => env('LARACOLLAB_DB_USERNAME', 'root'),
+            'password' => env('LARACOLLAB_DB_PASSWORD', 'root'),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
