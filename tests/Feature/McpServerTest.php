@@ -1,9 +1,13 @@
 <?php
 
+use App\Enums\UserRole;
+use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\McpToken;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TaskGroup;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -18,6 +22,18 @@ function mcpCall(string $method, array $params = []): array
     ];
 }
 
+function mcpAuthHeaders(): array
+{
+    [, $plaintext] = McpToken::createToken('test-client');
+
+    return ['Authorization' => 'Bearer '.$plaintext];
+}
+
+function mcpPost(array $payload)
+{
+    return test()->postJson('/mcp/icesum', $payload, mcpAuthHeaders());
+}
+
 function mcpData(array $response, string $key): mixed
 {
     $text = data_get($response, 'result.content.0.text');
@@ -25,8 +41,22 @@ function mcpData(array $response, string $key): mixed
     return data_get(json_decode((string) $text, true), $key);
 }
 
+test('mcp menolak tanpa token dan token salah', function () {
+    $this->postJson('/mcp/icesum', mcpCall('tools/list'))->assertUnauthorized();
+
+    $this->postJson('/mcp/icesum', mcpCall('tools/list'), ['Authorization' => 'Bearer salah'])
+        ->assertUnauthorized();
+});
+
+test('mcp menolak token kedaluwarsa', function () {
+    [, $plaintext] = McpToken::createToken('expired', now()->subDay());
+
+    $this->postJson('/mcp/icesum', mcpCall('tools/list'), ['Authorization' => 'Bearer '.$plaintext])
+        ->assertUnauthorized();
+});
+
 test('mcp mendaftarkan daftar tool icesum', function () {
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/list'));
+    $response = mcpPost(mcpCall('tools/list'));
 
     $response->assertOk();
     $names = collect($response->json('result.tools'))->pluck('name')->all();
@@ -48,7 +78,7 @@ test('mcp mendaftarkan daftar tool icesum', function () {
 test('mcp tool list-projects mengembalikan proyek', function () {
     $project = Project::factory()->create(['name' => 'Proyek MCP']);
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'list-projects',
         'arguments' => ['search' => 'MCP'],
     ]));
@@ -70,7 +100,7 @@ test('mcp tool project-board menampilkan grup dan task', function () {
         'title' => 'Task MCP',
     ]);
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'project-board',
         'arguments' => ['project_id' => $project->id],
     ]));
@@ -82,7 +112,7 @@ test('mcp tool project-board menampilkan grup dan task', function () {
 });
 
 test('mcp tool project-board menolak proyek yang tidak ada', function () {
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'project-board',
         'arguments' => ['project_id' => 999999],
     ]));
@@ -94,7 +124,7 @@ test('mcp tool project-board menolak proyek yang tidak ada', function () {
 test('mcp tool invoice-detail menampilkan item invoice', function () {
     $invoice = Invoice::factory()->create();
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'invoice-detail',
         'arguments' => ['invoice_id' => $invoice->id],
     ]));
@@ -115,7 +145,7 @@ test('mcp tool unbilled-summary meringkas task belum tertagih', function () {
         'invoice_id' => null,
     ]);
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'unbilled-summary',
         'arguments' => ['project_id' => $project->id],
     ]));
@@ -128,7 +158,7 @@ test('mcp tool create-task membuat task baru', function () {
     $project = Project::factory()->create();
     $group = TaskGroup::factory()->create(['project_id' => $project->id]);
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'create-task',
         'arguments' => [
             'project_id' => $project->id,
@@ -148,7 +178,7 @@ test('mcp tool create-task menolak grup dari proyek lain', function () {
     $project = Project::factory()->create();
     $otherGroup = TaskGroup::factory()->create();
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'create-task',
         'arguments' => [
             'project_id' => $project->id,
@@ -171,7 +201,7 @@ test('mcp tool update-task mengubah sebagian field', function () {
         'title' => 'Judul lama',
     ]);
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'update-task',
         'arguments' => [
             'task_id' => $task->id,
@@ -197,7 +227,7 @@ test('mcp tool generate-invoice membuat invoice dari task', function () {
         'invoice_id' => null,
     ]);
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'generate-invoice',
         'arguments' => [
             'project_id' => $project->id,
@@ -214,7 +244,7 @@ test('mcp tool generate-invoice membuat invoice dari task', function () {
 test('mcp tool mark-invoice-paid melunasi invoice unpaid', function () {
     $invoice = Invoice::factory()->unpaid()->create();
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'mark-invoice-paid',
         'arguments' => ['invoice_id' => $invoice->id],
     ]));
@@ -228,7 +258,7 @@ test('mcp tool mark-invoice-paid melunasi invoice unpaid', function () {
 test('mcp tool mark-invoice-paid menolak invoice yang sudah lunas', function () {
     $invoice = Invoice::factory()->paid()->create();
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'mark-invoice-paid',
         'arguments' => ['invoice_id' => $invoice->id],
     ]));
@@ -240,7 +270,7 @@ test('mcp tool mark-invoice-paid menolak invoice yang sudah lunas', function () 
 test('mcp tool cancel-invoice membatalkan invoice unpaid', function () {
     $invoice = Invoice::factory()->unpaid()->create();
 
-    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+    $response = mcpPost(mcpCall('tools/call', [
         'name' => 'cancel-invoice',
         'arguments' => ['invoice_id' => $invoice->id],
     ]));
@@ -249,4 +279,39 @@ test('mcp tool cancel-invoice membatalkan invoice unpaid', function () {
 
     expect(mcpData($response->json(), 'status'))->toBe('CANCELLED');
     expect($invoice->fresh()->status->value)->toBe('CANCELLED');
+});
+
+test('staff dapat generate dan mencabut token mcp dari pengaturan', function () {
+    $staff = User::factory()->create(['role' => UserRole::STAFF->value]);
+
+    $response = $this->actingAs($staff)->post(route('settings.mcp-tokens.store'), [
+        'name' => 'Claude Desktop',
+        'expires_in' => 'never',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHas('mcp_token_plaintext');
+
+    $token = McpToken::where('name', 'Claude Desktop')->first();
+    expect($token)->not->toBeNull();
+    expect($token->token)->toBe(hash('sha256', session('mcp_token_plaintext')));
+
+    $this->actingAs($staff)
+        ->delete(route('settings.mcp-tokens.destroy', $token))
+        ->assertRedirect();
+
+    expect(McpToken::find($token->id))->toBeNull();
+});
+
+test('tamu dan customer tidak dapat mengelola token mcp', function () {
+    $this->post(route('settings.mcp-tokens.store'), ['name' => 'X'])->assertRedirect('/login');
+
+    $customer = User::factory()->create([
+        'role' => UserRole::CUSTOMER->value,
+        'customer_id' => Customer::factory()->create()->id,
+    ]);
+
+    $this->actingAs($customer)
+        ->post(route('settings.mcp-tokens.store'), ['name' => 'X'])
+        ->assertForbidden();
 });

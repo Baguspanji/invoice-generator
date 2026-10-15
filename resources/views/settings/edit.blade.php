@@ -58,6 +58,83 @@
             </button>
         </div>
     </form>
+
+    <div class="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <h3 class="text-lg font-bold text-dark dark:text-white">Token API MCP</h3>
+        <p class="mb-4 text-sm text-slate-500 dark:text-slate-400">
+            Diperlukan sebagai header <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">Authorization: Bearer &lt;token&gt;</code>
+            untuk mengakses endpoint <code class="rounded bg-slate-100 px-1 font-mono text-xs dark:bg-slate-800">POST {{ url('/mcp/icesum') }}</code>.
+        </p>
+
+        @if (session('mcp_token_plaintext'))
+            <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950">
+                <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Salin token ini sekarang — hanya ditampilkan sekali:</p>
+                <p class="mt-2 break-all rounded bg-white px-3 py-2 font-mono text-sm dark:bg-slate-900">{{ session('mcp_token_plaintext') }}</p>
+            </div>
+        @endif
+
+        @if ($mcpTokens->isEmpty())
+            <p class="mb-4 text-sm italic text-slate-400">Belum ada token.</p>
+        @else
+            <div class="mb-4 overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wider text-slate-500">
+                            <th class="py-2 pr-4">Nama</th>
+                            <th class="py-2 pr-4">Prefix</th>
+                            <th class="py-2 pr-4">Terakhir dipakai</th>
+                            <th class="py-2 pr-4">Kedaluwarsa</th>
+                            <th class="py-2 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        @foreach ($mcpTokens as $mcpToken)
+                            <tr>
+                                <td class="py-2 pr-4 font-medium">{{ $mcpToken->name }}</td>
+                                <td class="py-2 pr-4 font-mono text-xs">{{ $mcpToken->prefix }}…</td>
+                                <td class="py-2 pr-4 text-slate-500">{{ $mcpToken->last_used_at?->format('d/m/Y H:i') ?? '-' }}</td>
+                                <td class="py-2 pr-4 text-slate-500">{{ $mcpToken->expires_at?->format('d/m/Y') ?? 'Tidak pernah' }}</td>
+                                <td class="py-2 text-right">
+                                    <form method="POST" action="{{ route('settings.mcp-tokens.destroy', $mcpToken) }}"
+                                        onsubmit="return confirm('Cabut token {{ $mcpToken->name }}?')" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-sm font-medium text-red-600 hover:underline">Cabut</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ route('settings.mcp-tokens.store') }}" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            @csrf
+            <div class="flex-1">
+                <label for="mcp-token-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Nama token</label>
+                <input type="text" name="name" id="mcp-token-name" value="{{ old('name') }}" required placeholder="mis. Claude Desktop"
+                    class="mt-1 block w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                @error('name')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <label for="mcp-token-expiry" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Masa berlaku</label>
+                <select name="expires_in" id="mcp-token-expiry"
+                    class="mt-1 block rounded-lg border border-slate-200 bg-white py-2.5 px-3 text-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <option value="never">Tidak kedaluwarsa</option>
+                    <option value="30">30 hari</option>
+                    <option value="90">90 hari</option>
+                    <option value="365">1 tahun</option>
+                </select>
+            </div>
+            <button type="submit"
+                class="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                Generate Token
+            </button>
+        </form>
+    </div>
 @endsection
 
 @push('scripts')

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\McpToken;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,6 +55,7 @@ class SettingController extends Controller
             'fields' => $this->groups,
             'textareas' => $this->textareas,
             'values' => Setting::getMany($keys),
+            'mcpTokens' => McpToken::latest()->get(),
         ]);
     }
 
@@ -69,6 +71,35 @@ class SettingController extends Controller
         }
 
         return back()->with('success', 'Pengaturan berhasil disimpan.');
+    }
+
+    public function storeToken(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'expires_in' => ['nullable', 'string', 'in:never,30,90,365'],
+        ]);
+
+        $expiresAt = match ($validated['expires_in'] ?? 'never') {
+            '30' => now()->addDays(30),
+            '90' => now()->addDays(90),
+            '365' => now()->addYear(),
+            default => null,
+        };
+
+        [$token, $plaintext] = McpToken::createToken($validated['name'], $expiresAt);
+
+        return back()->with([
+            'success' => "Token MCP {$token->name} berhasil dibuat.",
+            'mcp_token_plaintext' => $plaintext,
+        ]);
+    }
+
+    public function destroyToken(McpToken $mcpToken): RedirectResponse
+    {
+        $mcpToken->delete();
+
+        return back()->with('success', "Token MCP {$mcpToken->name} berhasil dicabut.");
     }
 
     /**

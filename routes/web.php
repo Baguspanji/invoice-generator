@@ -49,6 +49,8 @@ Route::middleware(['auth', 'role:staff'])->group(function (): void {
 
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('/settings/mcp-tokens', [SettingController::class, 'storeToken'])->name('settings.mcp-tokens.store');
+    Route::delete('/settings/mcp-tokens/{mcpToken}', [SettingController::class, 'destroyToken'])->name('settings.mcp-tokens.destroy');
 
     Route::resource('projects', ProjectController::class);
     Route::prefix('projects/{project}')->name('projects.')->group(function (): void {
