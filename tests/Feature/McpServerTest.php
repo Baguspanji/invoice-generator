@@ -34,9 +34,14 @@ test('mcp mendaftarkan daftar tool icesum', function () {
     expect($names)->toContain(
         'list-projects',
         'project-board',
+        'create-task',
+        'update-task',
         'list-invoices',
         'invoice-detail',
-        'unbilled-summary'
+        'unbilled-summary',
+        'generate-invoice',
+        'mark-invoice-paid',
+        'cancel-invoice'
     );
 });
 
@@ -117,4 +122,131 @@ test('mcp tool unbilled-summary meringkas task belum tertagih', function () {
 
     $response->assertOk();
     expect(mcpData($response->json(), 'tasks'))->toHaveCount(1);
+});
+
+test('mcp tool create-task membuat task baru', function () {
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'create-task',
+        'arguments' => [
+            'project_id' => $project->id,
+            'task_group_id' => $group->id,
+            'title' => 'Task via MCP',
+            'priority' => 'high',
+        ],
+    ]));
+
+    $response->assertOk();
+
+    expect(mcpData($response->json(), 'title'))->toBe('Task via MCP');
+    expect(Task::where('title', 'Task via MCP')->exists())->toBeTrue();
+});
+
+test('mcp tool create-task menolak grup dari proyek lain', function () {
+    $project = Project::factory()->create();
+    $otherGroup = TaskGroup::factory()->create();
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'create-task',
+        'arguments' => [
+            'project_id' => $project->id,
+            'task_group_id' => $otherGroup->id,
+            'title' => 'Task lintas proyek',
+        ],
+    ]));
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+    expect(Task::where('title', 'Task lintas proyek')->exists())->toBeFalse();
+});
+
+test('mcp tool update-task mengubah sebagian field', function () {
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+    $task = Task::factory()->create([
+        'project_id' => $project->id,
+        'task_group_id' => $group->id,
+        'title' => 'Judul lama',
+    ]);
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'update-task',
+        'arguments' => [
+            'task_id' => $task->id,
+            'title' => 'Judul baru',
+            'completed' => true,
+        ],
+    ]));
+
+    $response->assertOk();
+
+    expect(mcpData($response->json(), 'title'))->toBe('Judul baru')
+        ->and(mcpData($response->json(), 'completed'))->toBeTrue();
+    expect($task->fresh()->completed_at)->not->toBeNull();
+});
+
+test('mcp tool generate-invoice membuat invoice dari task', function () {
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+    $task = Task::factory()->create([
+        'project_id' => $project->id,
+        'task_group_id' => $group->id,
+        'billable' => true,
+        'invoice_id' => null,
+    ]);
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'generate-invoice',
+        'arguments' => [
+            'project_id' => $project->id,
+            'task_ids' => [$task->id],
+        ],
+    ]));
+
+    $response->assertOk();
+
+    expect(mcpData($response->json(), 'status'))->toBe('UNPAID');
+    expect($task->fresh()->invoice_id)->not->toBeNull();
+});
+
+test('mcp tool mark-invoice-paid melunasi invoice unpaid', function () {
+    $invoice = Invoice::factory()->unpaid()->create();
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'mark-invoice-paid',
+        'arguments' => ['invoice_id' => $invoice->id],
+    ]));
+
+    $response->assertOk();
+
+    expect(mcpData($response->json(), 'status'))->toBe('PAID');
+    expect($invoice->fresh()->status->value)->toBe('PAID');
+});
+
+test('mcp tool mark-invoice-paid menolak invoice yang sudah lunas', function () {
+    $invoice = Invoice::factory()->paid()->create();
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'mark-invoice-paid',
+        'arguments' => ['invoice_id' => $invoice->id],
+    ]));
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+});
+
+test('mcp tool cancel-invoice membatalkan invoice unpaid', function () {
+    $invoice = Invoice::factory()->unpaid()->create();
+
+    $response = $this->postJson('/mcp/icesum', mcpCall('tools/call', [
+        'name' => 'cancel-invoice',
+        'arguments' => ['invoice_id' => $invoice->id],
+    ]));
+
+    $response->assertOk();
+
+    expect(mcpData($response->json(), 'status'))->toBe('CANCELLED');
+    expect($invoice->fresh()->status->value)->toBe('CANCELLED');
 });
