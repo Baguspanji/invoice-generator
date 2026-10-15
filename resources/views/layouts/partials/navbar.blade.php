@@ -8,6 +8,7 @@
                 </a>
                 <div class="ml-6 hidden items-center gap-1 md:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" label="Dashboard" />
+                    <x-nav-link :href="route('projects.index')" :active="request()->routeIs('projects.*')" label="Proyek" />
                     <x-nav-link :href="route('invoices.index')" :active="request()->routeIs('invoices.*')" label="Invoice" />
                     <x-nav-link :href="route('customers.index')" :active="request()->routeIs('customers.*')" label="Pelanggan" />
                     <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')" label="Laporan" />

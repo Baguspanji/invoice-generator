@@ -4,8 +4,12 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectInvoiceController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TimeLogController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +36,18 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+    Route::resource('projects', ProjectController::class);
+    Route::prefix('projects/{project}')->name('projects.')->group(function (): void {
+        Route::post('tasks', [TaskController::class, 'store'])->name('tasks.store');
+        Route::put('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+        Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+        Route::post('tasks/move', [TaskController::class, 'move'])->name('tasks.move');
+        Route::post('tasks/{task}/time-log', [TimeLogController::class, 'store'])->name('tasks.time-log.store');
+        Route::delete('tasks/{task}/time-log/{timeLog}', [TimeLogController::class, 'destroy'])->name('tasks.time-log.destroy');
+        Route::delete('tasks/{task}/attachments/{attachment}', [TaskController::class, 'destroyAttachment'])->name('tasks.attachments.destroy');
+        Route::post('invoices/generate', [ProjectInvoiceController::class, 'store'])->name('invoices.generate');
+    });
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
     Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');

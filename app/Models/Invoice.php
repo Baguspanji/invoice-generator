@@ -65,6 +65,14 @@ class Invoice extends Model
     }
 
     /**
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    /**
      * @param  Builder<Invoice>  $query
      * @return Builder<Invoice>
      */
