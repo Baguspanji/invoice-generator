@@ -1,0 +1,273 @@
+<script setup>
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue';
+import Sortable from 'sortablejs';
+import ProjectHeader from './ProjectHeader.vue';
+import TaskFilterBar from './TaskFilterBar.vue';
+import TaskListView from './TaskListView.vue';
+import TaskKanbanView from './TaskKanbanView.vue';
+import TaskCreateModal from './TaskCreateModal.vue';
+import TaskEditModal from './TaskEditModal.vue';
+import InvoiceGenerateModal from './InvoiceGenerateModal.vue';
+
+const props = defineProps({
+    config: {
+        type: Object,
+        required: true,
+    },
+    title: {
+        type: String,
+        default: '',
+    },
+});
+
+const cfg = props.config;
+const project = cfg.project || {};
+const viewMode = ref(cfg.viewMode || 'board');
+const taskGroups = ref(JSON.parse(JSON.stringify(cfg.taskGroups || [])));
+const users = cfg.users || [];
+const labels = cfg.labels || [];
+const unbilledTasks = ref(cfg.unbilledTasks || []);
+
+// Modals
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
+const showInvoiceModal = ref(false);
+const selectedTask = ref(null);
+
+// Live filters for List View
+const filters = reactive({
+    search: cfg.filters?.search || '',
+    priority: cfg.filters?.priority || '',
+    user_id: cfg.filters?.user_id || '',
+    label_id: cfg.filters?.label_id || '',
+    billing: cfg.filters?.billing || '',
+});
+
+const hasActiveFilters = computed(() => {
+    return Boolean(
+        filters.search ||
+        filters.priority ||
+        filters.user_id ||
+        filters.label_id ||
+        filters.billing
+    );
+});
+
+function resetFilters() {
+    filters.search = '';
+    filters.priority = '';
+    filters.user_id = '';
+    filters.label_id = '';
+    filters.billing = '';
+}
+
+function matchesFilter(task) {
+    if (filters.search) {
+        const q = filters.search.toLowerCase();
+        const text = `${task.title || ''} ${task.description || ''}`.toLowerCase();
+        if (!text.includes(q)) return false;
+    }
+    if (filters.priority) {
+        const pVal = typeof task.priority === 'object' && task.priority !== null ? task.priority.value : task.priority;
+        if (pVal !== filters.priority) return false;
+    }
+    if (filters.user_id) {
+        if (filters.user_id === 'unassigned') {
+            if (task.assigned_to_user_id) return false;
+        } else if (String(task.assigned_to_user_id) !== String(filters.user_id)) {
+            return false;
+        }
+    }
+    if (filters.label_id) {
+        const taskLabels = (task.labels || []).map(l => String(l.id));
+        if (!taskLabels.includes(String(filters.label_id))) return false;
+    }
+    if (filters.billing) {
+        if (filters.billing === 'billable' && (!task.billable || task.invoice_id)) return false;
+        if (filters.billing === 'invoiced' && !task.invoice_id) return false;
+        if (filters.billing === 'non_billable' && task.billable) return false;
+    }
+    return true;
+}
+
+function filteredTasks(group) {
+    return (group.tasks || []).filter(matchesFilter);
+}
+
+function openEditModal(task) {
+    selectedTask.value = task;
+    showEditModal.value = true;
+}
+
+// Drag & Drop Sortable Initialization
+const sortableInstances = [];
+
+function setupSortables() {
+    sortableInstances.forEach(inst => inst.destroy());
+    sortableInstances.length = 0;
+
+    nextTick(() => {
+        if (viewMode.value === 'board') {
+            document.querySelectorAll('.kanban-tasks-container').forEach(el => {
+                const inst = Sortable.create(el, {
+                    group: 'kanban-tasks',
+                    animation: 180,
+                    ghostClass: 'opacity-40',
+                    dragClass: 'shadow-lg',
+                    handle: '.drag-handle',
+                    onEnd: handleDragEnd,
+                });
+                sortableInstances.push(inst);
+            });
+        } else {
+            document.querySelectorAll('.list-tasks-container').forEach(el => {
+                const inst = Sortable.create(el, {
+                    group: 'list-tasks',
+                    animation: 180,
+                    ghostClass: 'opacity-40',
+                    handle: '.drag-handle',
+                    disabled: hasActiveFilters.value,
+                    onEnd: handleDragEnd,
+                });
+                sortableInstances.push(inst);
+            });
+        }
+    });
+}
+
+async function handleDragEnd(evt) {
+    const taskId = Number(evt.item.dataset.taskId);
+    const fromGroupId = Number(evt.from.dataset.groupId);
+    const toGroupId = Number(evt.to.dataset.groupId);
+    const newIndex = evt.newIndex;
+
+    // Revert manual DOM movement so Vue handles virtual DOM rendering
+    evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex] || null);
+
+    const fromGroup = taskGroups.value.find(g => g.id === fromGroupId);
+    const toGroup = taskGroups.value.find(g => g.id === toGroupId);
+    if (!fromGroup || !toGroup) return;
+
+    const taskIndex = fromGroup.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
+
+    const [movedTask] = fromGroup.tasks.splice(taskIndex, 1);
+    movedTask.task_group_id = toGroupId;
+
+    if (toGroup.name.toLowerCase() === 'done') {
+        movedTask.completed_at = new Date().toISOString();
+    } else if (fromGroup.name.toLowerCase() === 'done') {
+        movedTask.completed_at = null;
+    }
+
+    toGroup.tasks.splice(newIndex, 0, movedTask);
+
+    try {
+        const response = await fetch(cfg.urls.moveTask, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': cfg.csrf,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                task_group_id: toGroupId,
+                order_column: newIndex + 1,
+                task_ids: toGroup.tasks.map(t => t.id),
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Gagal memindahkan task');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Gagal memindahkan task ke server.');
+    }
+}
+
+watch([viewMode, hasActiveFilters], () => {
+    // Sync URL mode without reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', viewMode.value);
+    window.history.replaceState({}, '', url.toString());
+    setupSortables();
+});
+
+onMounted(() => {
+    setupSortables();
+});
+</script>
+
+<template>
+    <div>
+        <!-- Top Action Bar -->
+        <ProjectHeader
+            :project="project"
+            :view-mode="viewMode"
+            :unbilled-tasks-count="unbilledTasks.length"
+            :urls="cfg.urls"
+            @update:view-mode="viewMode = $event"
+            @open-create-modal="showCreateModal = true"
+            @open-invoice-modal="showInvoiceModal = true"
+        />
+
+        <!-- LIST VIEW -->
+        <div v-if="viewMode === 'list'">
+            <TaskFilterBar
+                :filters="filters"
+                :has-active-filters="hasActiveFilters"
+                :users="users"
+                :labels="labels"
+                @reset="resetFilters"
+            />
+
+            <TaskListView
+                :task-groups="taskGroups"
+                :filtered-tasks="filteredTasks"
+                :cfg="cfg"
+                :has-active-filters="hasActiveFilters"
+                @edit-task="openEditModal"
+            />
+        </div>
+
+        <!-- KANBAN BOARD VIEW -->
+        <div v-else>
+            <TaskKanbanView
+                :task-groups="taskGroups"
+                :cfg="cfg"
+                @edit-task="openEditModal"
+            />
+        </div>
+
+        <!-- MODALS -->
+        <TaskCreateModal
+            :show="showCreateModal"
+            :task-groups="taskGroups"
+            :users="users"
+            :labels="labels"
+            :project="project"
+            :cfg="cfg"
+            @close="showCreateModal = false"
+        />
+
+        <TaskEditModal
+            :show="showEditModal"
+            :task="selectedTask"
+            :task-groups="taskGroups"
+            :users="users"
+            :labels="labels"
+            :project="project"
+            :cfg="cfg"
+            @close="showEditModal = false"
+        />
+
+        <InvoiceGenerateModal
+            :show="showInvoiceModal"
+            :unbilled-tasks="unbilledTasks"
+            :cfg="cfg"
+            @close="showInvoiceModal = false"
+        />
+    </div>
+</template>

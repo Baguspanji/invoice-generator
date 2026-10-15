@@ -82,14 +82,59 @@ class ProjectController extends Controller
 
     public function show(Request $request, Project $project): View
     {
+        $hasFilters = $request->filled('search')
+            || $request->filled('priority')
+            || $request->filled('user_id')
+            || $request->filled('label_id')
+            || $request->filled('billing');
+
         $project->load([
             'customer',
             'users',
-            'taskGroups.tasks.assignedUser',
-            'taskGroups.tasks.timeLogs',
-            'taskGroups.tasks.invoice',
-            'taskGroups.tasks.labels',
-            'taskGroups.tasks.attachments',
+            'taskGroups.tasks' => function ($taskQuery) use ($request, $hasFilters) {
+                if ($hasFilters) {
+                    if ($request->filled('search')) {
+                        $search = $request->query('search');
+                        $taskQuery->where(function ($q) use ($search) {
+                            $q->where('title', 'like', "%{$search}%")
+                                ->orWhere('description', 'like', "%{$search}%");
+                        });
+                    }
+
+                    if ($request->filled('priority')) {
+                        $taskQuery->where('priority', $request->query('priority'));
+                    }
+
+                    if ($request->filled('user_id')) {
+                        if ($request->query('user_id') === 'unassigned') {
+                            $taskQuery->whereNull('assigned_to_user_id');
+                        } else {
+                            $taskQuery->where('assigned_to_user_id', $request->query('user_id'));
+                        }
+                    }
+
+                    if ($request->filled('label_id')) {
+                        $taskQuery->whereHas('labels', fn ($q) => $q->where('labels.id', $request->query('label_id')));
+                    }
+
+                    if ($request->filled('billing')) {
+                        match ($request->query('billing')) {
+                            'billable' => $taskQuery->where('billable', true)->whereNull('invoice_id'),
+                            'non_billable' => $taskQuery->where('billable', false),
+                            'invoiced' => $taskQuery->whereNotNull('invoice_id'),
+                            default => null,
+                        };
+                    }
+                }
+
+                $taskQuery->with([
+                    'assignedUser',
+                    'timeLogs',
+                    'invoice',
+                    'labels',
+                    'attachments',
+                ]);
+            },
         ]);
 
         $unbilledTasks = $project->tasks()
@@ -97,7 +142,7 @@ class ProjectController extends Controller
             ->where('billable', true)
             ->get();
 
-        $viewMode = $request->query('view', 'board');
+        $viewMode = $request->query('view', 'list');
 
         $labels = Label::orderBy('name')->get();
         if ($labels->isEmpty()) {
@@ -118,7 +163,9 @@ class ProjectController extends Controller
             'unbilledTasks' => $unbilledTasks,
             'users' => User::orderBy('name')->get(),
             'labels' => $labels,
-            'viewMode' => in_array($viewMode, ['board', 'list'], true) ? $viewMode : 'board',
+            'viewMode' => in_array($viewMode, ['board', 'list'], true) ? $viewMode : 'list',
+            'filters' => $request->only(['search', 'priority', 'user_id', 'label_id', 'billing']),
+            'hasFilters' => $hasFilters,
         ]);
     }
 

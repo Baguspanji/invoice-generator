@@ -51,7 +51,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->decimal('estimation', 8, 2)->nullable();
             $table->decimal('fixed_price', 15, 2)->nullable();
-            $table->boolean('billable')->default(true);
+            $table->boolean('billable')->default(false);
             $table->unsignedInteger('order_column')->default(0);
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();

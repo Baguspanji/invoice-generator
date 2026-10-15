@@ -28,7 +28,7 @@ class TaskFactory extends Factory
             'description' => fake()->paragraph(),
             'estimation' => fake()->randomFloat(2, 1, 40),
             'fixed_price' => null,
-            'billable' => true,
+            'billable' => false,
             'order_column' => fake()->numberBetween(0, 20),
             'completed_at' => null,
         ];

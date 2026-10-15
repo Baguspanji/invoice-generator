@@ -42,7 +42,7 @@ class TaskController extends Controller
             'assigned_to_user_id' => $validated['assigned_to_user_id'] ?? null,
             'estimation' => $validated['estimation'] ?? null,
             'fixed_price' => $validated['fixed_price'] ?? null,
-            'billable' => $request->boolean('billable', true),
+            'billable' => $request->boolean('billable', false),
             'order_column' => $maxOrder + 1,
         ]);
 
@@ -98,7 +98,7 @@ class TaskController extends Controller
             'assigned_to_user_id' => $validated['assigned_to_user_id'] ?? null,
             'estimation' => $validated['estimation'] ?? null,
             'fixed_price' => $validated['fixed_price'] ?? null,
-            'billable' => $request->boolean('billable', true),
+            'billable' => $request->has('billable') ? $request->boolean('billable') : $task->billable,
             'completed_at' => $completedAt,
         ]);
 
@@ -129,6 +129,8 @@ class TaskController extends Controller
             'task_id' => ['required', 'exists:tasks,id'],
             'task_group_id' => ['required', 'exists:task_groups,id'],
             'order_column' => ['nullable', 'integer', 'min:0'],
+            'task_ids' => ['nullable', 'array'],
+            'task_ids.*' => ['integer'],
         ]);
 
         $task = $project->tasks()->findOrFail($validated['task_id']);
@@ -146,6 +148,12 @@ class TaskController extends Controller
             'order_column' => $validated['order_column'] ?? $task->order_column,
             'completed_at' => $completedAt,
         ]);
+
+        if (! empty($validated['task_ids'])) {
+            foreach ($validated['task_ids'] as $idx => $id) {
+                $project->tasks()->where('id', $id)->update(['order_column' => $idx + 1]);
+            }
+        }
 
         return response()->json([
             'success' => true,

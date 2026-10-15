@@ -67,6 +67,21 @@ test('pengguna dapat menambahkan task ke proyek', function () {
     expect($project->tasks()->where('title', 'Setup Database Schema')->exists())->toBeTrue();
 });
 
+test('task baru secara default memiliki status billable false', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+
+    $this->actingAs($user)->post(route('projects.tasks.store', $project), [
+        'task_group_id' => $group->id,
+        'title' => 'Internal Task Non Billable',
+    ])->assertRedirect(route('projects.show', $project));
+
+    $task = $project->tasks()->where('title', 'Internal Task Non Billable')->first();
+    expect($task)->not->toBeNull();
+    expect($task->billable)->toBeFalse();
+});
+
 test('pengguna dapat memulai dan menghentikan timer pada task', function () {
     $user = User::factory()->create();
     $project = Project::factory()->create();
@@ -134,6 +149,52 @@ test('pengguna dapat melihat proyek dalam mode list view', function () {
         ->assertOk()
         ->assertSee('List View Specific Task')
         ->assertSee('Backlog');
+});
+
+test('pengguna dapat mencari dan memfilter task pada mode list view', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+
+    $task1 = Task::factory()->create([
+        'project_id' => $project->id,
+        'task_group_id' => $group->id,
+        'title' => 'Integrasi Payment Gateway',
+        'priority' => TaskPriority::URGENT,
+        'billable' => true,
+    ]);
+
+    $task2 = Task::factory()->create([
+        'project_id' => $project->id,
+        'task_group_id' => $group->id,
+        'title' => 'Desain Halaman Profil',
+        'priority' => TaskPriority::LOW,
+        'billable' => false,
+    ]);
+
+    // Search query
+    $responseSearch = $this->actingAs($user)
+        ->get(route('projects.show', [$project, 'view' => 'list', 'search' => 'Payment']))
+        ->assertOk();
+
+    expect($responseSearch->viewData('project')->taskGroups->first()->tasks->pluck('title')->all())
+        ->toBe(['Integrasi Payment Gateway']);
+
+    // Priority filter
+    $responsePriority = $this->actingAs($user)
+        ->get(route('projects.show', [$project, 'view' => 'list', 'priority' => 'low']))
+        ->assertOk();
+
+    expect($responsePriority->viewData('project')->taskGroups->first()->tasks->pluck('title')->all())
+        ->toBe(['Desain Halaman Profil']);
+
+    // Billing filter
+    $responseBilling = $this->actingAs($user)
+        ->get(route('projects.show', [$project, 'view' => 'list', 'billing' => 'non_billable']))
+        ->assertOk();
+
+    expect($responseBilling->viewData('project')->taskGroups->first()->tasks->pluck('title')->all())
+        ->toBe(['Desain Halaman Profil']);
 });
 
 test('pengguna dapat memperbarui task dari list view', function () {
