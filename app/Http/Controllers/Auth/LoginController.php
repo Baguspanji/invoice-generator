@@ -18,16 +18,25 @@ class LoginController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
-        $credentials = $request->only('email', 'password');
+        $credentials = $request->credentials();
         $remember = $request->boolean('remember');
 
         if (! Auth::attempt($credentials, $remember)) {
             return back()
-                ->withInput($request->only('email', 'remember'))
-                ->withErrors(['email' => 'Email atau kata sandi salah.']);
+                ->withInput($request->only('login', 'email', 'remember'))
+                ->withErrors([
+                    'login' => 'Username/email atau kata sandi salah.',
+                    'email' => 'Username/email atau kata sandi salah.',
+                ]);
         }
 
         $request->session()->regenerate();
+
+        $user = Auth::user();
+
+        if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+            return redirect()->intended(route('portal.dashboard'));
+        }
 
         return redirect()->intended(route('dashboard'));
     }

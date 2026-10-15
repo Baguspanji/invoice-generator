@@ -7,7 +7,7 @@
         <form class="space-y-6" method="POST" action="{{ route('login') }}">
             @csrf
             <div>
-                <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Alamat
+                <label for="login" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Username atau
                     Email</label>
                 <div class="relative mt-1 rounded-lg shadow-sm">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -17,10 +17,14 @@
                             </path>
                         </svg>
                     </div>
-                    <input type="email" name="email" id="email" value="{{ old('email') }}" required
+                    <input type="text" name="login" id="login" value="{{ old('login', old('email')) }}" required
+                        autocomplete="username"
                         class="block w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm transition duration-150 ease-in-out focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                        placeholder="admin@perusahaan.com">
+                        placeholder="username atau admin@perusahaan.com">
                 </div>
+                @error('login')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
                 @error('email')
                     <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
                 @enderror
@@ -63,9 +67,9 @@
                     <label for="remember-me" class="ml-2 block text-sm text-slate-600 dark:text-slate-400">Ingat
                         Saya</label>
                 </div>
-                <div class="text-sm">
+                {{-- <div class="text-sm">
                     <a href="#" class="font-medium text-primary hover:text-blue-700">Lupa Password?</a>
-                </div>
+                </div> --}}
             </div>
 
             <div>

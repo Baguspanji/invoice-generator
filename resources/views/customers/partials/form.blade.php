@@ -57,3 +57,45 @@
         @enderror
     </div>
 </div>
+
+<div class="mt-6 rounded-xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
+    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <input type="checkbox" name="create_account" value="1" @checked(old('create_account')) class="rounded text-primary focus:ring-primary">
+        Buatkan akun login portal untuk pelanggan ini
+    </label>
+    <p class="mt-1 text-xs text-slate-500">Akun memakai role customer dan hanya bisa melihat proyek + invoice miliknya.</p>
+    <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div>
+            <label for="username" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Username</label>
+            <input type="text" name="username" id="username" value="{{ old('username') }}"
+                class="mt-1 block w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                placeholder="username-unik">
+            @error('username')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label for="account_email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email Akun (opsional)</label>
+            <input type="email" name="account_email" id="account_email" value="{{ old('account_email') }}"
+                class="mt-1 block w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                placeholder="Kosongkan = pakai email pelanggan">
+            @error('account_email')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label for="account_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password (min 8)</label>
+            <input type="password" name="account_password" id="account_password"
+                class="mt-1 block w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                placeholder="********">
+            @error('account_password')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+    @if (! empty($customer->users) && $customer->users->isNotEmpty())
+        <div class="mt-3 text-xs text-slate-500">
+            Akun terhubung: {{ $customer->users->map(fn ($u) => ($u->username ?? '-') . ' / ' . $u->email)->join(', ') }}
+        </div>
+    @endif
+</div>

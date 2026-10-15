@@ -47,6 +47,18 @@
                     <dt class="font-medium text-slate-500 dark:text-slate-400">Total Invoice</dt>
                     <dd class="text-dark dark:text-white">{{ $customer->invoices_count }} invoice</dd>
                 </div>
+                <div>
+                    <dt class="font-medium text-slate-500 dark:text-slate-400">Akun Portal</dt>
+                    <dd class="text-dark dark:text-white">
+                        @if ($customer->users->isNotEmpty())
+                            @foreach ($customer->users as $portalUser)
+                                <span class="block">{{ $portalUser->username ?? '-' }} / {{ $portalUser->email }}</span>
+                            @endforeach
+                        @else
+                            <span class="italic text-slate-400">Belum ada — buat via menu Ubah.</span>
+                        @endif
+                    </dd>
+                </div>
             </dl>
         </div>
 

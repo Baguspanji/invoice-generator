@@ -4,6 +4,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\Portal\DashboardController as PortalDashboardController;
+use App\Http\Controllers\Portal\InvoiceController as PortalInvoiceController;
+use App\Http\Controllers\Portal\ProjectController as PortalProjectController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectInvoiceController;
 use App\Http\Controllers\ReportController;
@@ -14,9 +17,17 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return Auth::check()
-        ? redirect()->route('dashboard')
-        : view('welcome');
+    if (! Auth::check()) {
+        return view('welcome');
+    }
+
+    $user = Auth::user();
+
+    if ($user && method_exists($user, 'isCustomer') && $user->isCustomer()) {
+        return redirect()->route('portal.dashboard');
+    }
+
+    return redirect()->route('dashboard');
 })->name('home');
 
 Route::middleware('guest')->group(function (): void {
@@ -26,7 +37,9 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+});
 
+Route::middleware(['auth', 'role:staff'])->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -71,4 +84,13 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'markAsCancelled'])
         ->middleware('invoice.unpaid')
         ->name('invoices.cancel');
+});
+
+Route::middleware(['auth', 'role:customer'])->prefix('portal')->name('portal.')->group(function (): void {
+    Route::get('/', [PortalDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/projects', [PortalProjectController::class, 'index'])->name('projects.index');
+    Route::get('/projects/{project}', [PortalProjectController::class, 'show'])->name('projects.show');
+    Route::get('/invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('/invoices/{invoice}', [PortalInvoiceController::class, 'show'])->name('invoices.show');
+    Route::get('/invoices/{invoice}/pdf', [PortalInvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
 });
