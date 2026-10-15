@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Deploy di balik nginx/reverse-proxy pada network docker.
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'invoice.unpaid' => EnsureInvoiceIsUnpaid::class,
             'role' => EnsureRole::class,

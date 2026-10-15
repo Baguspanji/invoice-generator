@@ -1,0 +1,41 @@
+name: icesum
+
+# Deploy: salin .env.docker.example menjadi .env lalu sesuaikan nilainya.
+# Single container: nginx + php-fpm + queue worker (supervisord).
+# MySQL disediakan di stack lain pada network eksternal "database_net"
+# dengan hostname "mysql" (DB_HOST dipaksa ke mysql di bawah).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: icesum-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+    volumes:
+      - storage_data:/var/www/html/storage
+    networks:
+      - icesum_net
+      - database_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+networks:
+  icesum_net:
+    driver: bridge
+  database_net:
+    external: true
+
+volumes:
+  storage_data:
