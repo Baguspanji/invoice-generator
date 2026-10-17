@@ -7,10 +7,8 @@ use App\Exports\InvoiceItemsExport;
 use App\Exports\InvoicesExport;
 use App\Models\Customer;
 use App\Models\Invoice;
-use App\Models\Setting;
+use App\Services\InvoicePdfService;
 use App\Support\ExcelDownload;
-use App\Support\Terbilang;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -129,34 +127,16 @@ class InvoiceController extends Controller
         return ExcelDownload::stream(InvoiceItemsExport::spreadsheet($invoice), $filename);
     }
 
-    public function downloadPdf(Invoice $invoice): Response
+    public function downloadPdf(Invoice $invoice, InvoicePdfService $pdf): Response
     {
-        $invoice->load(['customer', 'items']);
-
-        $settings = Setting::getMany([
-            'sender_id_number',
-            'sender_name',
-            'sender_address',
-            'sender_phone',
-            'bank_name',
-            'bank_account_number',
-            'bank_account_name',
-            'payment_note',
-            'invoice_title',
-            'invoice_subtitle',
-            'signature_image',
-        ]);
-
-        $pdf = Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'settings' => $settings,
-            'terbilang' => Terbilang::make($invoice->total_amount),
-        ])->setPaper('a4');
-
-        $filename = str_replace(['/', '\\'], '-', $invoice->invoice_number).'.pdf';
-
-        // return $pdf->download($filename);
-        return $pdf->stream($filename);
+        return response(
+            $pdf->bytes($invoice),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.$pdf->filename($invoice).'"',
+            ]
+        );
     }
 
     public function markAsPaid(Invoice $invoice): RedirectResponse

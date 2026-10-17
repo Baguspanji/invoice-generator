@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
-use App\Models\Setting;
-use App\Support\Terbilang;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\InvoicePdfService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,34 +35,17 @@ class InvoiceController extends Controller
         return view('portal.invoices.show', ['invoice' => $invoice->load(['customer', 'items'])]);
     }
 
-    public function downloadPdf(Request $request, Invoice $invoice): Response
+    public function downloadPdf(Request $request, Invoice $invoice, InvoicePdfService $pdf): Response
     {
         abort_unless((int) $invoice->customer_id === (int) $request->user()->customer_id, 403);
 
-        $invoice->load(['customer', 'items']);
-
-        $settings = Setting::getMany([
-            'sender_id_number',
-            'sender_name',
-            'sender_address',
-            'sender_phone',
-            'bank_name',
-            'bank_account_number',
-            'bank_account_name',
-            'payment_note',
-            'invoice_title',
-            'invoice_subtitle',
-            'signature_image',
-        ]);
-
-        $pdf = Pdf::loadView('invoices.pdf', [
-            'invoice' => $invoice,
-            'settings' => $settings,
-            'terbilang' => Terbilang::make($invoice->total_amount),
-        ])->setPaper('a4');
-
-        $filename = str_replace(['/', '\\'], '-', $invoice->invoice_number).'.pdf';
-
-        return $pdf->stream($filename);
+        return response(
+            $pdf->bytes($invoice),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.$pdf->filename($invoice).'"',
+            ]
+        );
     }
 }

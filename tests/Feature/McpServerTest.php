@@ -71,8 +71,19 @@ test('mcp mendaftarkan daftar tool icesum', function () {
         'unbilled-summary',
         'generate-invoice',
         'mark-invoice-paid',
-        'cancel-invoice'
+        'cancel-invoice',
+        'download-invoice-pdf'
     );
+});
+
+test('mcp mendaftarkan resource invoice pdf', function () {
+    $response = mcpPost(mcpCall('resources/templates/list'));
+
+    $response->assertOk();
+    $templates = $response->json('result.resourceTemplates');
+
+    expect($templates[0]['uriTemplate'])->toBe('invoice://{invoice_id}/pdf')
+        ->and($templates[0]['mimeType'])->toBe('application/pdf');
 });
 
 test('mcp tool list-projects mengembalikan proyek', function () {
@@ -279,6 +290,75 @@ test('mcp tool cancel-invoice membatalkan invoice unpaid', function () {
 
     expect(mcpData($response->json(), 'status'))->toBe('CANCELLED');
     expect($invoice->fresh()->status->value)->toBe('CANCELLED');
+});
+
+test('mcp tool download-invoice-pdf mengembalikan metadata dan resource link', function () {
+    $invoice = Invoice::factory()->create();
+
+    $response = mcpPost(mcpCall('tools/call', [
+        'name' => 'download-invoice-pdf',
+        'arguments' => ['invoice_id' => $invoice->id],
+    ]));
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeFalse();
+
+    $meta = mcpData($response->json(), 'invoice_number');
+
+    expect($meta)->toBe($invoice->invoice_number)
+        ->and(mcpData($response->json(), 'filename'))->toEndWith('.pdf')
+        ->and(mcpData($response->json(), 'mime_type'))->toBe('application/pdf')
+        ->and(mcpData($response->json(), 'resource_uri'))->toBe("invoice://{$invoice->id}/pdf")
+        ->and(mcpData($response->json(), 'size_bytes'))->toBeGreaterThan(1000);
+
+    $contents = $response->json('result.content');
+    $link = collect($contents)->firstWhere('type', 'resource_link');
+
+    expect($link)->not->toBeNull()
+        ->and($link['uri'])->toBe("invoice://{$invoice->id}/pdf")
+        ->and($link['mimeType'])->toBe('application/pdf');
+});
+
+test('mcp tool download-invoice-pdf menolak invoice yang tidak ada', function () {
+    $response = mcpPost(mcpCall('tools/call', [
+        'name' => 'download-invoice-pdf',
+        'arguments' => ['invoice_id' => 999999],
+    ]));
+
+    $response->assertOk();
+    expect($response->json('result.isError'))->toBeTrue();
+});
+
+test('mcp resource invoice pdf mengembalikan blob pdf', function () {
+    $invoice = Invoice::factory()->create();
+
+    $response = mcpPost(mcpCall('resources/read', [
+        'uri' => "invoice://{$invoice->id}/pdf",
+    ]));
+
+    $response->assertOk();
+
+    $contents = $response->json('result.contents');
+    expect($contents)->toHaveCount(1)
+        ->and($contents[0]['mimeType'])->toBe('application/pdf')
+        ->and($contents[0]['uri'])->toBe("invoice://{$invoice->id}/pdf");
+
+    $binary = base64_decode($contents[0]['blob'], true);
+    expect($binary)->not->toBeFalse()
+        ->and(substr((string) $binary, 0, 5))->toBe('%PDF-');
+});
+
+test('mcp resource invoice pdf menolak invoice yang tidak ada', function () {
+    $response = mcpPost(mcpCall('resources/read', [
+        'uri' => 'invoice://999999/pdf',
+    ]));
+
+    $response->assertOk();
+    // Resource tidak ketemu atau handle mengembalikan error.
+    expect(
+        $response->json('error') !== null || $response->json('result.contents') === null
+        || ($response->json('result.content.0.text') !== null)
+    )->toBeTrue();
 });
 
 test('staff dapat generate dan mencabut token mcp dari pengaturan', function () {
