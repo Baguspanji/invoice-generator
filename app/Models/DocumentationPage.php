@@ -118,6 +118,14 @@ class DocumentationPage extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    /**
+     * @return HasMany<DocumentationActivity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(DocumentationActivity::class, 'page_id')->latest('id');
+    }
+
     public function isPublished(): bool
     {
         return $this->status === DocumentationPageStatus::PUBLISHED;

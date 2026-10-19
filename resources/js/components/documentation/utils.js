@@ -41,6 +41,25 @@ export function statusLabel(value) {
     }
 }
 
+export function activityDotClass(action) {
+    switch (action) {
+        case 'published':
+            return 'bg-emerald-500';
+        case 'submitted_for_review':
+            return 'bg-blue-500';
+        case 'changes_requested':
+            return 'bg-amber-500';
+        case 'deleted':
+            return 'bg-red-500';
+        case 'restored':
+            return 'bg-violet-500';
+        case 'created':
+            return 'bg-primary';
+        default:
+            return 'bg-slate-400';
+    }
+}
+
 export function priorityBadgeClass(priority) {
     const value = typeof priority === 'object' && priority !== null ? priority.value : priority;
 

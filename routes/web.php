@@ -3,8 +3,11 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Documentation\ActivityController as DocumentationActivityController;
 use App\Http\Controllers\Documentation\AttachmentController as DocumentationAttachmentController;
+use App\Http\Controllers\Documentation\ExportController as DocumentationExportController;
 use App\Http\Controllers\Documentation\PageController as DocumentationPageController;
+use App\Http\Controllers\Documentation\PreviewController as DocumentationPreviewController;
 use App\Http\Controllers\Documentation\SearchController as DocumentationSearchController;
 use App\Http\Controllers\Documentation\TaskLinkController as DocumentationTaskLinkController;
 use App\Http\Controllers\Documentation\VersionController as DocumentationVersionController;
@@ -87,6 +90,11 @@ Route::middleware(['auth', 'role:staff'])->group(function (): void {
         Route::get('pages/{page}/versions', [DocumentationVersionController::class, 'index'])->name('versions.index');
         Route::get('pages/{page}/versions/{version}', [DocumentationVersionController::class, 'show'])->name('versions.show');
         Route::post('pages/{page}/restore/{version}', [DocumentationVersionController::class, 'restore'])->name('versions.restore');
+
+        Route::get('pages/{page}/activities', [DocumentationActivityController::class, 'index'])->name('activities.index');
+        Route::get('pages/{page}/export/markdown', [DocumentationExportController::class, 'markdown'])->name('pages.export.markdown');
+        Route::get('pages/{page}/export/pdf', [DocumentationExportController::class, 'pdf'])->name('pages.export.pdf');
+        Route::post('pages/{page}/preview', [DocumentationPreviewController::class, 'show'])->name('pages.preview');
 
         Route::post('pages/{page}/tasks', [DocumentationTaskLinkController::class, 'store'])->name('tasks.store');
         Route::delete('pages/{page}/tasks/{task}', [DocumentationTaskLinkController::class, 'destroy'])->name('tasks.destroy');

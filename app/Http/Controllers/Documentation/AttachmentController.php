@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Documentation;
 
+use App\Enums\DocumentationActivityAction;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentationAttachment;
 use App\Models\DocumentationPage;
+use App\Services\Documentation\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class AttachmentController extends Controller
 {
-    public function store(Request $request, DocumentationPage $page): JsonResponse
+    public function store(Request $request, DocumentationPage $page, ActivityLogger $activity): JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', 'max:10240'],
@@ -29,6 +31,14 @@ class AttachmentController extends Controller
             'mime_type' => $file->getClientMimeType(),
         ]);
 
+        $activity->log(
+            $page,
+            $request->user(),
+            DocumentationActivityAction::ATTACHMENT_ADDED,
+            'Menambahkan lampiran «'.$attachment->file_name.'»',
+            ['attachment_id' => $attachment->id],
+        );
+
         return response()->json([
             'success' => true,
             'attachment' => [
@@ -42,11 +52,20 @@ class AttachmentController extends Controller
         ]);
     }
 
-    public function destroy(DocumentationPage $page, DocumentationAttachment $attachment): JsonResponse
+    public function destroy(Request $request, DocumentationPage $page, DocumentationAttachment $attachment, ActivityLogger $activity): JsonResponse
     {
         abort_unless((int) $attachment->page_id === (int) $page->id, 404);
 
         Storage::disk($attachment->disk)->delete($attachment->file_path);
+
+        $activity->log(
+            $page,
+            $request->user(),
+            DocumentationActivityAction::ATTACHMENT_REMOVED,
+            'Menghapus lampiran «'.$attachment->file_name.'»',
+            ['attachment_id' => $attachment->id],
+        );
+
         $attachment->delete();
 
         return response()->json(['success' => true]);

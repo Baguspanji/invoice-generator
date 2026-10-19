@@ -51,4 +51,12 @@ class DocumentationSpace extends Model
     {
         return $this->hasMany(DocumentationPage::class, 'space_id');
     }
+
+    /**
+     * @return HasMany<DocumentationActivity, $this>
+     */
+    public function activities(): HasMany
+    {
+        return $this->hasMany(DocumentationActivity::class, 'space_id');
+    }
 }

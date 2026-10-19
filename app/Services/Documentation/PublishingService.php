@@ -2,6 +2,7 @@
 
 namespace App\Services\Documentation;
 
+use App\Enums\DocumentationActivityAction;
 use App\Enums\DocumentationPageStatus;
 use App\Models\DocumentationPage;
 use App\Models\User;
@@ -11,6 +12,7 @@ class PublishingService
 {
     public function __construct(
         private VersionService $versions,
+        private ActivityLogger $activity,
     ) {}
 
     public function publish(DocumentationPage $page, User $user, ?string $changeSummary = null): DocumentationPage
@@ -24,6 +26,13 @@ class PublishingService
                 'updated_by' => $user->id,
             ]);
 
+            $this->activity->log(
+                $page,
+                $user,
+                DocumentationActivityAction::PUBLISHED,
+                'Mempublikasikan halaman',
+            );
+
             return $page;
         });
     }
@@ -35,6 +44,13 @@ class PublishingService
             'updated_by' => $user->id,
         ]);
 
+        $this->activity->log(
+            $page,
+            $user,
+            DocumentationActivityAction::SUBMITTED_FOR_REVIEW,
+            'Mengirim halaman untuk review',
+        );
+
         return $page;
     }
 
@@ -44,6 +60,13 @@ class PublishingService
             'status' => DocumentationPageStatus::CHANGES_REQUESTED,
             'updated_by' => $user->id,
         ]);
+
+        $this->activity->log(
+            $page,
+            $user,
+            DocumentationActivityAction::CHANGES_REQUESTED,
+            'Meminta revisi halaman',
+        );
 
         return $page;
     }

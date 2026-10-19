@@ -2,6 +2,7 @@
 
 namespace App\Services\Documentation;
 
+use App\Enums\DocumentationActivityAction;
 use App\Enums\DocumentationPageStatus;
 use App\Models\DocumentationPage;
 use App\Models\DocumentationVersion;
@@ -10,6 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class VersionService
 {
+    public function __construct(
+        private ActivityLogger $activity,
+    ) {}
+
     public function snapshot(DocumentationPage $page, User $user, ?string $changeSummary = null): DocumentationVersion
     {
         $next = (int) $page->versions()->max('version_number') + 1;
@@ -40,6 +45,14 @@ class VersionService
             $page->save();
 
             $this->snapshot($page, $user, 'Restore dari versi #'.$version->version_number);
+
+            $this->activity->log(
+                $page,
+                $user,
+                DocumentationActivityAction::RESTORED,
+                'Memulihkan versi #'.$version->version_number,
+                ['version_number' => $version->version_number],
+            );
 
             return $page;
         });

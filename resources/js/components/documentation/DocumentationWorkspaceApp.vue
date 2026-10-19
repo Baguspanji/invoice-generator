@@ -5,6 +5,8 @@ import DocumentEditor from './DocumentEditor.vue';
 import VersionHistoryPanel from './VersionHistoryPanel.vue';
 import PageTasksPanel from './PageTasksPanel.vue';
 import PageAttachmentsPanel from './PageAttachmentsPanel.vue';
+import ActivityPanel from './ActivityPanel.vue';
+import DocumentPreviewModal from './DocumentPreviewModal.vue';
 import { statusBadgeClass, statusLabel } from './utils';
 
 const props = defineProps({
@@ -28,6 +30,7 @@ const content = ref(page.value?.content || null);
 const versions = ref(page.value?.versions || []);
 const tasks = ref(page.value?.tasks || []);
 const attachments = ref(page.value?.attachments || []);
+const activities = ref(page.value?.activities || []);
 
 const saveState = ref('idle');
 const busy = ref(false);
@@ -37,6 +40,16 @@ const searchQuery = ref('');
 const searchResults = ref([]);
 const searchOpen = ref(false);
 
+const filterCategory = ref('');
+const filterStatus = ref('');
+
+const preview = reactive({
+    open: false,
+    loading: false,
+    html: '',
+    title: '',
+});
+
 const createModal = reactive({
     open: false,
     parentId: null,
@@ -45,6 +58,14 @@ const createModal = reactive({
 });
 
 const status = computed(() => page.value?.status || { value: 'draft', label: 'Draft' });
+
+const filteredTree = computed(() => filterNodes(tree.value, filterCategory.value, filterStatus.value));
+
+const exportMarkdownUrl = computed(() =>
+    page.value ? `${cfg.pagesBase}/${page.value.id}/export/markdown` : '#'
+);
+
+const exportPdfUrl = computed(() => (page.value ? `${cfg.pagesBase}/${page.value.id}/export/pdf` : '#'));
 
 const saveLabel = computed(() => {
     switch (saveState.value) {
@@ -186,6 +207,7 @@ async function submitReview() {
 
     if (data) {
         page.value.status = data.page.status;
+        refreshActivities();
         window.showToast?.('Halaman dikirim untuk review.');
     }
 }
@@ -212,6 +234,7 @@ async function linkTask(taskId) {
 
     if (data) {
         tasks.value = data.tasks;
+        refreshActivities();
         window.showToast?.('Task ditautkan.');
     }
 }
@@ -232,6 +255,7 @@ async function unlinkTask(taskId) {
         if (response.ok) {
             const data = await response.json();
             tasks.value = data.tasks;
+            refreshActivities();
             window.showToast?.('Tautan task dilepas.');
         }
     } finally {
@@ -265,6 +289,7 @@ async function uploadAttachment(file) {
 
         const data = await response.json();
         attachments.value = [...attachments.value, data.attachment];
+        refreshActivities();
         window.showToast?.('Lampiran diunggah.');
     } finally {
         busy.value = false;
@@ -286,10 +311,81 @@ async function removeAttachment(attachmentId) {
 
         if (response.ok) {
             attachments.value = attachments.value.filter((item) => item.id !== attachmentId);
+            refreshActivities();
             window.showToast?.('Lampiran dihapus.');
         }
     } finally {
         busy.value = false;
+    }
+}
+
+function filterNodes(nodes, categoryId, statusValue) {
+    const result = [];
+
+    for (const node of nodes || []) {
+        const children = filterNodes(node.children || [], categoryId, statusValue);
+        const matchesCategory = !categoryId || String(node.category_id) === String(categoryId);
+        const matchesStatus = !statusValue || node.status?.value === statusValue;
+
+        if ((matchesCategory && matchesStatus) || children.length) {
+            result.push({ ...node, children });
+        }
+    }
+
+    return result;
+}
+
+async function refreshActivities() {
+    if (!page.value) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${cfg.pagesBase}/${page.value.id}/activities`, {
+            headers: { Accept: 'application/json' },
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            activities.value = data.activities;
+        }
+    } catch (e) {
+        // abaikan kegagalan refresh log
+    }
+}
+
+async function openPreview() {
+    if (!page.value) {
+        return;
+    }
+
+    preview.open = true;
+    preview.loading = true;
+    preview.html = '';
+    preview.title = pageTitle.value;
+
+    try {
+        const response = await fetch(`${cfg.pagesBase}/${page.value.id}/preview`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': cfg.csrf,
+            },
+            body: JSON.stringify({ content: content.value }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            preview.html = data.html;
+            preview.title = data.title || pageTitle.value;
+        } else {
+            window.showToast?.('Gagal memuat pratinjau.', 'error');
+        }
+    } catch (e) {
+        window.showToast?.('Gagal memuat pratinjau.', 'error');
+    } finally {
+        preview.loading = false;
     }
 }
 
@@ -367,24 +463,47 @@ function onSearchInput() {
 async function runSearch() {
     const term = searchQuery.value.trim();
 
-    if (term === '') {
+    if (term === '' && !filterCategory.value && !filterStatus.value) {
         searchResults.value = [];
 
         return;
     }
 
+    const params = new URLSearchParams({ project_id: cfg.project.id });
+
+    if (term !== '') {
+        params.set('q', term);
+    }
+
+    if (filterCategory.value) {
+        params.set('category_id', filterCategory.value);
+    }
+
+    if (filterStatus.value) {
+        params.set('status', filterStatus.value);
+    }
+
     try {
-        const response = await fetch(
-            `${cfg.search}?q=${encodeURIComponent(term)}&project_id=${cfg.project.id}`,
-            { headers: { Accept: 'application/json' } }
-        );
+        const response = await fetch(`${cfg.search}?${params.toString()}`, {
+            headers: { Accept: 'application/json' },
+        });
 
         if (response.ok) {
             const data = await response.json();
             searchResults.value = data.results;
+            searchOpen.value = true;
         }
     } catch (e) {
         searchResults.value = [];
+    }
+}
+
+function applyFilters() {
+    if (searchQuery.value.trim() !== '' || filterCategory.value || filterStatus.value) {
+        runSearch();
+    } else {
+        searchResults.value = [];
+        searchOpen.value = false;
     }
 }
 
@@ -405,17 +524,47 @@ hydrating = false;
             <aside class="lg:col-span-1">
                 <div class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
                     <div class="relative">
-                        <input v-model="searchQuery" type="search" placeholder="Cari halaman…"
+                        <input v-model="searchQuery" type="search" placeholder="Cari judul atau isi…"
                             class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                             @input="onSearchInput" @focus="searchOpen = searchQuery.trim().length > 0" />
 
                         <div v-if="searchOpen && searchResults.length"
-                            class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                            class="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
                             <a v-for="result in searchResults" :key="result.id" :href="result.url"
-                                class="block truncate px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">
-                                {{ result.title }}
+                                class="block border-b border-slate-100 px-3 py-2 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span
+                                        class="min-w-0 truncate text-sm font-medium text-slate-700 dark:text-slate-200">
+                                        {{ result.title }}
+                                    </span>
+                                    <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                        :class="statusBadgeClass(result.status?.value)">
+                                        {{ result.status?.label }}
+                                    </span>
+                                </div>
+                                <p v-if="result.excerpt"
+                                    class="mt-0.5 line-clamp-2 text-xs text-slate-400 dark:text-slate-500">
+                                    {{ result.excerpt }}
+                                </p>
                             </a>
                         </div>
+                    </div>
+
+                    <div class="mt-2 grid grid-cols-2 gap-2">
+                        <select v-model="filterCategory" @change="applyFilters"
+                            class="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            <option value="">Semua kategori</option>
+                            <option v-for="category in cfg.categories" :key="category.id" :value="category.id">
+                                {{ category.name }}
+                            </option>
+                        </select>
+                        <select v-model="filterStatus" @change="applyFilters"
+                            class="rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            <option value="">Semua status</option>
+                            <option v-for="item in cfg.statuses" :key="item.value" :value="item.value">
+                                {{ item.label }}
+                            </option>
+                        </select>
                     </div>
 
                     <button type="button"
@@ -428,7 +577,7 @@ hydrating = false;
                     </button>
 
                     <nav class="mt-3">
-                        <DocumentTree :nodes="tree" :active-id="page?.id ?? null" :base-url="cfg.workspaceUrl"
+                        <DocumentTree :nodes="filteredTree" :active-id="page?.id ?? null" :base-url="cfg.workspaceUrl"
                             @create-child="openCreateModal" @delete="deletePage" />
                     </nav>
                 </div>
@@ -465,7 +614,7 @@ hydrating = false;
                             <span>{{ saveLabel }}</span>
                         </div>
 
-                        <div class="mt-3 flex flex-wrap gap-2">
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
                             <button type="button" :disabled="busy"
                                 class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                                 @click="submitReview">
@@ -476,13 +625,27 @@ hydrating = false;
                                 @click="publish">
                                 Publikasikan
                             </button>
+                            <button type="button" :disabled="busy"
+                                class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                @click="openPreview">
+                                Pratinjau
+                            </button>
+                            <a :href="exportMarkdownUrl"
+                                class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                Ekspor .md
+                            </a>
+                            <a :href="exportPdfUrl"
+                                class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                Ekspor PDF
+                            </a>
                         </div>
                     </div>
 
                     <DocumentEditor v-model="content" />
 
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <VersionHistoryPanel :versions="versions" :busy="busy" @restore="restore" />
+                        <ActivityPanel :activities="activities" />
                         <PageTasksPanel :tasks="tasks" :project-tasks="cfg.projectTasks" :busy="busy" @link="linkTask"
                             @unlink="unlinkTask" />
                         <PageAttachmentsPanel :attachments="attachments" :busy="busy" @upload="uploadAttachment"
@@ -531,5 +694,8 @@ hydrating = false;
                 </div>
             </div>
         </div>
+
+        <DocumentPreviewModal :open="preview.open" :html="preview.html" :title="preview.title"
+            :loading="preview.loading" @close="preview.open = false" />
     </div>
 </template>

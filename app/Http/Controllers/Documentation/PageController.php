@@ -64,11 +64,11 @@ class PageController extends Controller
         ]);
     }
 
-    public function destroy(DocumentationPage $page, PageService $pageService): RedirectResponse
+    public function destroy(Request $request, DocumentationPage $page, PageService $pageService): RedirectResponse
     {
         $project = $page->space->project;
 
-        $pageService->delete($page);
+        $pageService->delete($page, $request->user());
 
         return redirect()
             ->route('projects.documentation.show', $project)

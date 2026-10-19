@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Documentation;
 
+use App\Enums\DocumentationActivityAction;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentationPage;
 use App\Models\Task;
+use App\Services\Documentation\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class TaskLinkController extends Controller
 {
-    public function store(Request $request, DocumentationPage $page): JsonResponse
+    public function store(Request $request, DocumentationPage $page, ActivityLogger $activity): JsonResponse
     {
         $validated = $request->validate([
             'task_id' => ['required', 'integer', 'exists:tasks,id'],
@@ -29,12 +31,28 @@ class TaskLinkController extends Controller
             $task->id => ['created_by' => $request->user()->id],
         ]);
 
+        $activity->log(
+            $page,
+            $request->user(),
+            DocumentationActivityAction::TASK_LINKED,
+            'Menautkan task «'.$task->title.'»',
+            ['task_id' => $task->id],
+        );
+
         return response()->json(['success' => true, 'tasks' => $this->tasks($page)]);
     }
 
-    public function destroy(DocumentationPage $page, Task $task): JsonResponse
+    public function destroy(Request $request, DocumentationPage $page, Task $task, ActivityLogger $activity): JsonResponse
     {
         $page->tasks()->detach($task->id);
+
+        $activity->log(
+            $page,
+            $request->user(),
+            DocumentationActivityAction::TASK_UNLINKED,
+            'Melepas tautan task «'.$task->title.'»',
+            ['task_id' => $task->id],
+        );
 
         return response()->json(['success' => true, 'tasks' => $this->tasks($page)]);
     }

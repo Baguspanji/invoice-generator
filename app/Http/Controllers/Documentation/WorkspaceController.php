@@ -26,12 +26,12 @@ class WorkspaceController extends Controller
 
         if ($request->filled('page')) {
             $selectedPage = $space->pages()
-                ->with(['versions.creator', 'tasks', 'attachments'])
+                ->with(['versions.creator', 'tasks', 'attachments', 'activities.user'])
                 ->find($request->integer('page'));
         }
 
         $selectedPage ??= $space->pages()
-            ->with(['versions.creator', 'tasks', 'attachments'])
+            ->with(['versions.creator', 'tasks', 'attachments', 'activities.user'])
             ->orderBy('order_column')
             ->orderBy('id')
             ->first();
@@ -125,6 +125,10 @@ class WorkspaceController extends Controller
                 'mime_type' => $attachment->mime_type,
                 'url' => $attachment->url(),
             ])->values(),
+            'activities' => $page->activities
+                ->take(50)
+                ->map(fn ($activity): array => $activity->toPayload())
+                ->values(),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Documentation;
 
+use App\Enums\DocumentationActivityAction;
 use App\Enums\DocumentationPageStatus;
 use App\Models\DocumentationPage;
 use App\Models\DocumentationSpace;
@@ -16,6 +17,7 @@ class PageService
 {
     public function __construct(
         private ContentValidationService $contentValidation,
+        private ActivityLogger $activity,
     ) {}
 
     /**
@@ -31,7 +33,7 @@ class PageService
                 ->where('parent_id', $parentId)
                 ->max('order_column') ?? 0;
 
-            return $space->pages()->create([
+            $page = $space->pages()->create([
                 'category_id' => $data['category_id'] ?? null,
                 'parent_id' => $parentId,
                 'title' => $title,
@@ -42,6 +44,15 @@ class PageService
                 'lock_version' => 1,
                 'order_column' => (int) $order + 1,
             ]);
+
+            $this->activity->log(
+                $page,
+                $user,
+                DocumentationActivityAction::CREATED,
+                'Membuat halaman «'.$page->title.'»',
+            );
+
+            return $page;
         });
     }
 
@@ -85,13 +96,37 @@ class PageService
             $page->lock_version = $page->lock_version + 1;
             $page->save();
 
+            if (array_key_exists('title', $attributes)) {
+                $this->activity->log(
+                    $page,
+                    $user,
+                    DocumentationActivityAction::UPDATED,
+                    'Mengubah judul halaman',
+                    ['title' => $page->title],
+                );
+            } elseif (array_key_exists('content', $attributes)) {
+                $this->activity->logThrottled(
+                    $page,
+                    $user,
+                    DocumentationActivityAction::UPDATED,
+                    'Memperbarui konten halaman',
+                );
+            }
+
             return $page;
         });
     }
 
-    public function delete(DocumentationPage $page): void
+    public function delete(DocumentationPage $page, ?User $user = null): void
     {
-        DB::transaction(function () use ($page) {
+        DB::transaction(function () use ($page, $user) {
+            $this->activity->log(
+                $page,
+                $user,
+                DocumentationActivityAction::DELETED,
+                'Menghapus halaman «'.$page->title.'»',
+            );
+
             foreach ($page->attachments as $attachment) {
                 Storage::disk($attachment->disk)->delete($attachment->file_path);
             }
@@ -129,6 +164,7 @@ class PageService
             ->map(fn (DocumentationPage $page): array => [
                 'id' => $page->id,
                 'title' => $page->title,
+                'category_id' => $page->category_id,
                 'status' => [
                     'value' => $page->status->value,
                     'label' => $page->status->label(),
