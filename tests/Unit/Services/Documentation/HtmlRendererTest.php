@@ -58,3 +58,33 @@ test('code block biasa dirender sebagai pre code', function () {
 
     expect($html)->toBe('<pre><code class="language-php">echo 1;</code></pre>');
 });
+
+test('tabel dan gambar dirender ke html', function () {
+    $html = (new HtmlRenderer)->toHtml([
+        'type' => 'doc',
+        'content' => [
+            ['type' => 'table', 'content' => [
+                ['type' => 'tableRow', 'content' => [
+                    ['type' => 'tableHeader', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Kolom']]]]],
+                ]],
+            ]],
+            ['type' => 'image', 'attrs' => ['src' => 'https://example.com/a.png', 'alt' => 'gambar']],
+        ],
+    ]);
+
+    expect($html)
+        ->toContain('<table>')
+        ->toContain('<th>')
+        ->toContain('<img src="https://example.com/a.png" alt="gambar">');
+});
+
+test('gambar dengan src berbahaya dibuang', function () {
+    $html = (new HtmlRenderer)->toHtml([
+        'type' => 'doc',
+        'content' => [
+            ['type' => 'image', 'attrs' => ['src' => 'javascript:alert(1)']],
+        ],
+    ]);
+
+    expect($html)->toBe('');
+});

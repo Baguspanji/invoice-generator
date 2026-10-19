@@ -126,6 +126,14 @@ class DocumentationPage extends Model
         return $this->hasMany(DocumentationActivity::class, 'page_id')->latest('id');
     }
 
+    /**
+     * @return HasMany<DocumentationComment, $this>
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(DocumentationComment::class, 'page_id')->oldest('id');
+    }
+
     public function isPublished(): bool
     {
         return $this->status === DocumentationPageStatus::PUBLISHED;

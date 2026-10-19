@@ -7,6 +7,7 @@ import PageTasksPanel from './PageTasksPanel.vue';
 import PageAttachmentsPanel from './PageAttachmentsPanel.vue';
 import ActivityPanel from './ActivityPanel.vue';
 import DocumentPreviewModal from './DocumentPreviewModal.vue';
+import PageCommentsPanel from './PageCommentsPanel.vue';
 import { statusBadgeClass, statusLabel } from './utils';
 
 const props = defineProps({
@@ -31,6 +32,7 @@ const versions = ref(page.value?.versions || []);
 const tasks = ref(page.value?.tasks || []);
 const attachments = ref(page.value?.attachments || []);
 const activities = ref(page.value?.activities || []);
+const comments = ref(page.value?.comments || []);
 
 const saveState = ref('idle');
 const busy = ref(false);
@@ -66,6 +68,10 @@ const exportMarkdownUrl = computed(() =>
 );
 
 const exportPdfUrl = computed(() => (page.value ? `${cfg.pagesBase}/${page.value.id}/export/pdf` : '#'));
+
+const attachmentUploadUrl = computed(() =>
+    page.value ? `${cfg.pagesBase}/${page.value.id}/attachments` : null
+);
 
 const saveLabel = computed(() => {
     switch (saveState.value) {
@@ -389,6 +395,71 @@ async function openPreview() {
     }
 }
 
+async function addComment(body) {
+    if (!page.value) {
+        return;
+    }
+
+    busy.value = true;
+
+    try {
+        const response = await fetch(`${cfg.pagesBase}/${page.value.id}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': cfg.csrf,
+            },
+            body: JSON.stringify({ body }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            comments.value = data.comments;
+            window.showToast?.('Komentar ditambahkan.');
+        } else if (response.status === 422) {
+            const data = await response.json().catch(() => ({}));
+            window.showToast?.(data.message || 'Komentar tidak valid.', 'error');
+        } else {
+            window.showToast?.('Gagal mengirim komentar.', 'error');
+        }
+    } catch (e) {
+        window.showToast?.('Gagal mengirim komentar.', 'error');
+    } finally {
+        busy.value = false;
+    }
+}
+
+async function removeComment(commentId) {
+    if (!page.value) {
+        return;
+    }
+
+    busy.value = true;
+
+    try {
+        const response = await fetch(`${cfg.pagesBase}/${page.value.id}/comments/${commentId}`, {
+            method: 'DELETE',
+            headers: {
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': cfg.csrf,
+            },
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            comments.value = data.comments;
+            window.showToast?.('Komentar dihapus.');
+        } else {
+            window.showToast?.('Gagal menghapus komentar.', 'error');
+        }
+    } catch (e) {
+        window.showToast?.('Gagal menghapus komentar.', 'error');
+    } finally {
+        busy.value = false;
+    }
+}
+
 function openCreateModal(parentId = null) {
     createModal.open = true;
     createModal.parentId = parentId;
@@ -641,7 +712,7 @@ hydrating = false;
                         </div>
                     </div>
 
-                    <DocumentEditor v-model="content" />
+                    <DocumentEditor v-model="content" :upload-url="attachmentUploadUrl" :csrf="cfg.csrf" />
 
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <VersionHistoryPanel :versions="versions" :busy="busy" @restore="restore" />
@@ -650,6 +721,8 @@ hydrating = false;
                             @unlink="unlinkTask" />
                         <PageAttachmentsPanel :attachments="attachments" :busy="busy" @upload="uploadAttachment"
                             @remove="removeAttachment" />
+                        <PageCommentsPanel :comments="comments" :busy="busy" @add="addComment"
+                            @remove="removeComment" />
                     </div>
                 </template>
             </section>

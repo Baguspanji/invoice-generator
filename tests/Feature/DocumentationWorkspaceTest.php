@@ -5,6 +5,7 @@ use App\Enums\DocumentationPageStatus;
 use App\Enums\UserRole;
 use App\Models\Customer;
 use App\Models\DocumentationActivity;
+use App\Models\DocumentationComment;
 use App\Models\DocumentationPage;
 use App\Models\DocumentationSpace;
 use App\Models\Project;
@@ -395,4 +396,81 @@ test('pratinjau mengembalikan html ter-escape dan blok mermaid', function () {
 
     expect($html)->toContain('&lt;script&gt;')->not->toContain('<script>');
     expect($html)->toContain('class="mermaid"')->toContain('graph TD; A--&gt;B;');
+});
+
+test('menyimpan konten dengan tabel dan gambar', function () {
+    [$user, $project] = documentationContext();
+    $page = DocumentationPage::factory()->create();
+
+    $content = ['type' => 'doc', 'content' => [
+        ['type' => 'table', 'content' => [
+            ['type' => 'tableRow', 'content' => [
+                ['type' => 'tableHeader', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Kolom']]]]],
+            ]],
+        ]],
+        ['type' => 'image', 'attrs' => ['src' => 'https://example.com/a.png', 'alt' => 'gambar']],
+    ]];
+
+    $this->actingAs($user)
+        ->patchJson(route('documentation.pages.update', $page), [
+            'content' => $content,
+            'lock_version' => $page->lock_version,
+        ])
+        ->assertOk();
+
+    expect($page->fresh()->content['content'])->toHaveCount(2);
+});
+
+test('staff dapat menambah lalu menghapus komentarnya', function () {
+    [$user, $project] = documentationContext();
+    $page = DocumentationPage::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('documentation.comments.store', $page), ['body' => '  Mohon tambahkan diagram.  '])
+        ->assertOk()
+        ->assertJsonPath('comments.0.body', 'Mohon tambahkan diagram.')
+        ->assertJsonPath('comments.0.can_delete', true);
+
+    $this->assertDatabaseHas('documentation_comments', [
+        'page_id' => $page->id,
+        'user_id' => $user->id,
+        'body' => 'Mohon tambahkan diagram.',
+    ]);
+
+    $comment = $page->comments()->firstOrFail();
+
+    $this->actingAs($user)
+        ->deleteJson(route('documentation.comments.destroy', [$page, $comment]))
+        ->assertOk()
+        ->assertJsonCount(0, 'comments');
+
+    $this->assertDatabaseMissing('documentation_comments', ['id' => $comment->id]);
+});
+
+test('staff tidak dapat menghapus komentar pengguna lain', function () {
+    [$user, $project] = documentationContext();
+    $page = DocumentationPage::factory()->create();
+    $comment = DocumentationComment::factory()->create([
+        'page_id' => $page->id,
+        'user_id' => User::factory()->create()->id,
+    ]);
+
+    $this->actingAs($user)
+        ->deleteJson(route('documentation.comments.destroy', [$page, $comment]))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('documentation_comments', ['id' => $comment->id]);
+});
+
+test('customer tidak dapat menambah komentar halaman', function () {
+    $customer = Customer::factory()->create();
+    $user = User::factory()->create([
+        'role' => UserRole::CUSTOMER->value,
+        'customer_id' => $customer->id,
+    ]);
+    $page = DocumentationPage::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson(route('documentation.comments.store', $page), ['body' => 'halo'])
+        ->assertForbidden();
 });

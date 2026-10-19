@@ -5,6 +5,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Documentation\ActivityController as DocumentationActivityController;
 use App\Http\Controllers\Documentation\AttachmentController as DocumentationAttachmentController;
+use App\Http\Controllers\Documentation\CommentController as DocumentationCommentController;
 use App\Http\Controllers\Documentation\ExportController as DocumentationExportController;
 use App\Http\Controllers\Documentation\PageController as DocumentationPageController;
 use App\Http\Controllers\Documentation\PreviewController as DocumentationPreviewController;
@@ -92,6 +93,9 @@ Route::middleware(['auth', 'role:staff'])->group(function (): void {
         Route::post('pages/{page}/restore/{version}', [DocumentationVersionController::class, 'restore'])->name('versions.restore');
 
         Route::get('pages/{page}/activities', [DocumentationActivityController::class, 'index'])->name('activities.index');
+        Route::get('pages/{page}/comments', [DocumentationCommentController::class, 'index'])->name('comments.index');
+        Route::post('pages/{page}/comments', [DocumentationCommentController::class, 'store'])->name('comments.store');
+        Route::delete('pages/{page}/comments/{comment}', [DocumentationCommentController::class, 'destroy'])->name('comments.destroy');
         Route::get('pages/{page}/export/markdown', [DocumentationExportController::class, 'markdown'])->name('pages.export.markdown');
         Route::get('pages/{page}/export/pdf', [DocumentationExportController::class, 'pdf'])->name('pages.export.pdf');
         Route::post('pages/{page}/preview', [DocumentationPreviewController::class, 'show'])->name('pages.preview');

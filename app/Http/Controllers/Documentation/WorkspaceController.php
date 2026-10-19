@@ -6,6 +6,7 @@ use App\Enums\DocumentationPageStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DocumentationPage;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\Documentation\PageService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -26,12 +27,12 @@ class WorkspaceController extends Controller
 
         if ($request->filled('page')) {
             $selectedPage = $space->pages()
-                ->with(['versions.creator', 'tasks', 'attachments', 'activities.user'])
+                ->with(['versions.creator', 'tasks', 'attachments', 'activities.user', 'comments.user'])
                 ->find($request->integer('page'));
         }
 
         $selectedPage ??= $space->pages()
-            ->with(['versions.creator', 'tasks', 'attachments', 'activities.user'])
+            ->with(['versions.creator', 'tasks', 'attachments', 'activities.user', 'comments.user'])
             ->orderBy('order_column')
             ->orderBy('id')
             ->first();
@@ -73,7 +74,7 @@ class WorkspaceController extends Controller
                     ->get(['id', 'title'])
                     ->map(fn ($task): array => ['id' => $task->id, 'title' => $task->title])
                     ->values(),
-                'page' => $selectedPage ? $this->pagePayload($selectedPage) : null,
+                'page' => $selectedPage ? $this->pagePayload($selectedPage, $request->user()) : null,
             ],
         ]);
     }
@@ -81,7 +82,7 @@ class WorkspaceController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function pagePayload(DocumentationPage $page): array
+    private function pagePayload(DocumentationPage $page, ?User $viewer = null): array
     {
         return [
             'id' => $page->id,
@@ -128,6 +129,9 @@ class WorkspaceController extends Controller
             'activities' => $page->activities
                 ->take(50)
                 ->map(fn ($activity): array => $activity->toPayload())
+                ->values(),
+            'comments' => $page->comments
+                ->map(fn ($comment): array => $comment->toPayload($viewer))
                 ->values(),
         ];
     }

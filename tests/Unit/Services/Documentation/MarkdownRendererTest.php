@@ -78,3 +78,28 @@ test('task list menampilkan status selesai', function () {
 
     expect($markdown)->toBe("- [x] Selesai\n- [ ] Belum");
 });
+
+test('tabel dikonversi ke markdown table', function () {
+    $markdown = (new MarkdownRenderer)->toMarkdown(rendererContent([
+        ['type' => 'table', 'content' => [
+            ['type' => 'tableRow', 'content' => [
+                ['type' => 'tableHeader', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Nama']]]]],
+                ['type' => 'tableHeader', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Nilai']]]]],
+            ]],
+            ['type' => 'tableRow', 'content' => [
+                ['type' => 'tableCell', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'a']]]]],
+                ['type' => 'tableCell', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'b']]]]],
+            ]],
+        ]],
+    ]));
+
+    expect($markdown)->toBe("| Nama | Nilai |\n| --- | --- |\n| a | b |");
+});
+
+test('gambar dikonversi ke markdown', function () {
+    $markdown = (new MarkdownRenderer)->toMarkdown(rendererContent([
+        ['type' => 'image', 'attrs' => ['src' => 'https://example.com/a.png', 'alt' => 'gambar']],
+    ]));
+
+    expect($markdown)->toBe('![gambar](https://example.com/a.png)');
+});

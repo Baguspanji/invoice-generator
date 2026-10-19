@@ -178,4 +178,11 @@ watch(
     background: rgb(248 250 252);
     padding: 0.5rem 0.75rem;
 }
+
+.preview-content :deep(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 0.5rem 0;
+}
 </style>
