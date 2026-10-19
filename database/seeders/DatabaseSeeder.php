@@ -27,5 +27,9 @@ class DatabaseSeeder extends Seeder
             DocumentationTemplateSeeder::class,
             // InvoiceSeeder::class,
         ]);
+
+        if (! app()->environment('production')) {
+            $this->call(DocumentationDemoSeeder::class);
+        }
     }
 }
