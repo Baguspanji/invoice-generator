@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'customer_id',
@@ -65,6 +66,14 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class)->orderBy('order_column');
+    }
+
+    /**
+     * @return HasOne<DocumentationSpace, $this>
+     */
+    public function documentationSpace(): HasOne
+    {
+        return $this->hasOne(DocumentationSpace::class);
     }
 
     /**

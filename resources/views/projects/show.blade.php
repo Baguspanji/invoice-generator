@@ -88,6 +88,7 @@
             'urls' => [
                 'projectsIndex' => route('projects.index'),
                 'projectEdit' => route('projects.edit', $project),
+                'documentation' => route('projects.documentation.show', $project),
                 'tasksStore' => route('projects.tasks.store', $project),
                 'tasksBase' => url("/projects/{$project->id}/tasks"),
                 'moveTask' => route('projects.tasks.move', $project),

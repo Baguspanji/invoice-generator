@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             SettingSeeder::class,
+            DocumentationTemplateSeeder::class,
             // InvoiceSeeder::class,
         ]);
     }

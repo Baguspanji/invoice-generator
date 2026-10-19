@@ -102,6 +102,15 @@ class Task extends Model
         return $this->hasMany(TaskAttachment::class);
     }
 
+    /**
+     * @return BelongsToMany<DocumentationPage, $this>
+     */
+    public function documentationPages(): BelongsToMany
+    {
+        return $this->belongsToMany(DocumentationPage::class, 'documentation_page_task', 'task_id', 'page_id')
+            ->withPivot('created_by');
+    }
+
     public function isCompleted(): bool
     {
         return $this->completed_at !== null;

@@ -85,6 +85,11 @@ defineEmits(['update:viewMode', 'openCreateModal', 'openInvoiceModal']);
                 Terbitkan Invoice ({{ unbilledTasksCount }} Task)
             </button> -->
 
+            <a v-if="urls.documentation" :href="urls.documentation"
+                class="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                Dokumentasi
+            </a>
+
             <a :href="urls.projectEdit"
                 class="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
                 Pengaturan

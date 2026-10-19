@@ -20,6 +20,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/pages/project-board.js',
+                'resources/js/pages/documentation-workspace.js',
             ],
             refresh: true,
             fonts: [

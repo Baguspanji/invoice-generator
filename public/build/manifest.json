@@ -31,8 +31,15 @@
     "file": "assets/rolldown-runtime-hePW80VL.js",
     "name": "rolldown-runtime"
   },
+  "_vue.esm-bundler-B02JUXNW.js": {
+    "file": "assets/vue.esm-bundler-B02JUXNW.js",
+    "name": "vue.esm-bundler",
+    "imports": [
+      "_rolldown-runtime-hePW80VL.js"
+    ]
+  },
   "resources/css/app.css": {
-    "file": "assets/app-cp32meQs.css",
+    "file": "assets/app-CD9FwBF-.css",
     "name": "app",
     "names": [
       "app.css"
@@ -52,13 +59,25 @@
       "assets/app-stDfeQAy.css"
     ]
   },
+  "resources/js/pages/documentation-workspace.js": {
+    "file": "assets/documentation-workspace-tA3Mk2e6.js",
+    "name": "documentation-workspace",
+    "src": "resources/js/pages/documentation-workspace.js",
+    "isEntry": true,
+    "imports": [
+      "_vue.esm-bundler-B02JUXNW.js"
+    ],
+    "css": [
+      "assets/documentation-workspace-qPA3oAzU.css"
+    ]
+  },
   "resources/js/pages/project-board.js": {
-    "file": "assets/project-board-HdV0k3zp.js",
+    "file": "assets/project-board-wlWxwpfV.js",
     "name": "project-board",
     "src": "resources/js/pages/project-board.js",
     "isEntry": true,
     "imports": [
-      "_rolldown-runtime-hePW80VL.js"
+      "_vue.esm-bundler-B02JUXNW.js"
     ]
   }
 }

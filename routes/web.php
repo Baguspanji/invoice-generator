@@ -3,6 +3,12 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Documentation\AttachmentController as DocumentationAttachmentController;
+use App\Http\Controllers\Documentation\PageController as DocumentationPageController;
+use App\Http\Controllers\Documentation\SearchController as DocumentationSearchController;
+use App\Http\Controllers\Documentation\TaskLinkController as DocumentationTaskLinkController;
+use App\Http\Controllers\Documentation\VersionController as DocumentationVersionController;
+use App\Http\Controllers\Documentation\WorkspaceController as DocumentationWorkspaceController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\Portal\DashboardController as PortalDashboardController;
 use App\Http\Controllers\Portal\InvoiceController as PortalInvoiceController;
@@ -62,6 +68,31 @@ Route::middleware(['auth', 'role:staff'])->group(function (): void {
         Route::delete('tasks/{task}/time-log/{timeLog}', [TimeLogController::class, 'destroy'])->name('tasks.time-log.destroy');
         Route::delete('tasks/{task}/attachments/{attachment}', [TaskController::class, 'destroyAttachment'])->name('tasks.attachments.destroy');
         Route::post('invoices/generate', [ProjectInvoiceController::class, 'store'])->name('invoices.generate');
+    });
+
+    Route::get('projects/{project}/documentation', [DocumentationWorkspaceController::class, 'show'])
+        ->name('projects.documentation.show');
+    Route::post('projects/{project}/documentation/pages', [DocumentationPageController::class, 'store'])
+        ->name('projects.documentation.pages.store');
+
+    Route::prefix('documentation')->name('documentation.')->group(function (): void {
+        Route::get('search', [DocumentationSearchController::class, 'index'])->name('search');
+
+        Route::patch('pages/{page}', [DocumentationPageController::class, 'update'])->name('pages.update');
+        Route::delete('pages/{page}', [DocumentationPageController::class, 'destroy'])->name('pages.destroy');
+        Route::post('pages/{page}/publish', [DocumentationPageController::class, 'publish'])->name('pages.publish');
+        Route::post('pages/{page}/submit-review', [DocumentationPageController::class, 'submitReview'])->name('pages.submit-review');
+        Route::post('pages/{page}/request-changes', [DocumentationPageController::class, 'requestChanges'])->name('pages.request-changes');
+
+        Route::get('pages/{page}/versions', [DocumentationVersionController::class, 'index'])->name('versions.index');
+        Route::get('pages/{page}/versions/{version}', [DocumentationVersionController::class, 'show'])->name('versions.show');
+        Route::post('pages/{page}/restore/{version}', [DocumentationVersionController::class, 'restore'])->name('versions.restore');
+
+        Route::post('pages/{page}/tasks', [DocumentationTaskLinkController::class, 'store'])->name('tasks.store');
+        Route::delete('pages/{page}/tasks/{task}', [DocumentationTaskLinkController::class, 'destroy'])->name('tasks.destroy');
+
+        Route::post('pages/{page}/attachments', [DocumentationAttachmentController::class, 'store'])->name('attachments.store');
+        Route::delete('pages/{page}/attachments/{attachment}', [DocumentationAttachmentController::class, 'destroy'])->name('attachments.destroy');
     });
 
     Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
