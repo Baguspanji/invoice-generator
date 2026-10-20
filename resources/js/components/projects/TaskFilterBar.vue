@@ -20,11 +20,19 @@ defineProps({
         type: Number,
         default: 0,
     },
+    expandableCount: {
+        type: Number,
+        default: 0,
+    },
+    allExpanded: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const showCompleted = defineModel('showCompleted', { default: false });
 
-defineEmits(['reset']);
+defineEmits(['reset', 'toggle-expand-all']);
 </script>
 
 <template>
@@ -74,6 +82,11 @@ defineEmits(['reset']);
                     <option value="invoiced">Invoiced</option>
                     <option value="non_billable">Non-billable</option>
                 </select> -->
+
+                <button v-if="expandableCount > 0" type="button" @click="$emit('toggle-expand-all')"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {{ allExpanded ? 'Tutup semua subtask' : 'Buka semua subtask' }}
+                </button>
 
                 <button v-if="completedCount > 0" type="button" @click="showCompleted = !showCompleted"
                     class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition"

@@ -27,6 +27,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    parentTask: {
+        type: Object,
+        default: null,
+    },
 });
 
 defineEmits(['close']);
@@ -54,7 +58,7 @@ watch(() => props.taskGroups, (newGroups) => {
     <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
         <div class="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <h3 class="text-lg font-bold text-dark dark:text-white">Tambah Task Baru</h3>
+                <h3 class="text-lg font-bold text-dark dark:text-white">{{ parentTask ? 'Tambah Subtask' : 'Tambah Task Baru' }}</h3>
                 <button type="button" @click="$emit('close')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">
                     &times;
                 </button>
@@ -62,9 +66,14 @@ watch(() => props.taskGroups, (newGroups) => {
 
             <form method="POST" :action="cfg.urls.tasksStore" enctype="multipart/form-data" class="mt-4 space-y-4">
                 <input type="hidden" name="_token" :value="cfg.csrf" />
+                <input v-if="parentTask" type="hidden" name="parent_id" :value="parentTask.id" />
+
+                <p v-if="parentTask" class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    Parent: <span class="font-semibold text-slate-700 dark:text-slate-200">{{ parentTask.title }}</span>
+                </p>
 
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
+                    <div v-if="!parentTask">
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Kolom Status</label>
                         <select
                             name="task_group_id"

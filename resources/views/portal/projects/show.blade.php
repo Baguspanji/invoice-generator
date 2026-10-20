@@ -49,6 +49,25 @@
                             <p class="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-700/60">
                                 {{ $task->assignedUser->name ?? 'Unassigned' }}
                             </p>
+                            @if ($task->subtasks->isNotEmpty())
+                                @php($subtaskDone = $task->subtasks->whereNotNull('completed_at')->count())
+                                <details class="group mt-2 border-t border-slate-100 pt-2 dark:border-slate-700/60">
+                                    <summary class="flex cursor-pointer list-none items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200">
+                                        <svg class="h-3 w-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                        {{ $subtaskDone }}/{{ $task->subtasks->count() }} subtask
+                                    </summary>
+                                    <ul class="mt-2 space-y-1.5 border-l-2 border-slate-100 pl-2.5 dark:border-slate-700">
+                                        @foreach ($task->subtasks as $subtask)
+                                            <li class="text-xs">
+                                                <span class="{{ $subtask->completed_at ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-300' }}">
+                                                    {{ $subtask->title }}
+                                                </span>
+                                                <span class="ml-1 text-slate-400">· {{ $subtask->assignedUser->name ?? 'Unassigned' }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </details>
+                            @endif
                         </div>
                     @empty
                         <div class="rounded-lg border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-800">

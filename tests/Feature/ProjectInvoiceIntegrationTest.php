@@ -103,3 +103,44 @@ test('task yang sudah memiliki invoice tidak dapat ditagihkan dua kali', functio
 
     expect($task->fresh()->invoice_id)->toBe($existingInvoice->id);
 });
+
+test('subtask billable dapat ditagihkan secara terpisah dari task induknya', function () {
+    $user = User::factory()->create();
+    $customer = Customer::factory()->create();
+    $project = Project::factory()->create([
+        'customer_id' => $customer->id,
+        'rate' => 100000,
+        'pricing_type' => 'hourly',
+    ]);
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+
+    $parent = Task::factory()->create([
+        'project_id' => $project->id,
+        'task_group_id' => $group->id,
+        'billable' => false,
+    ]);
+    $subtask = Task::factory()->subtaskOf($parent)->create([
+        'billable' => true,
+        'invoice_id' => null,
+    ]);
+
+    TimeLog::factory()->create([
+        'task_id' => $subtask->id,
+        'user_id' => $user->id,
+        'minutes' => 60,
+    ]);
+
+    $this->actingAs($user)->post(route('projects.invoices.generate', $project), [
+        'task_ids' => [$subtask->id],
+        'due_date' => now()->addDays(7)->toDateString(),
+    ]);
+
+    $subtask->refresh();
+    $parent->refresh();
+
+    expect($subtask->invoice_id)->not->toBeNull()
+        ->and($parent->invoice_id)->toBeNull();
+
+    $invoice = Invoice::find($subtask->invoice_id);
+    expect((float) $invoice->total_amount)->toBe(100000.0);
+});

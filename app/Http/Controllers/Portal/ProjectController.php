@@ -33,7 +33,10 @@ class ProjectController extends Controller
 
         $project->load([
             'customer',
-            'taskGroups.tasks' => fn ($query) => $query->with(['assignedUser', 'labels', 'attachments'])->orderBy('order_column'),
+            'taskGroups.tasks' => fn ($query) => $query
+                ->topLevel()
+                ->with(['assignedUser', 'labels', 'attachments', 'subtasks.assignedUser'])
+                ->orderBy('order_column'),
         ]);
 
         return view('portal.projects.show', ['project' => $project]);

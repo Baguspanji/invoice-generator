@@ -395,3 +395,57 @@ test('tamu dan customer tidak dapat mengelola token mcp', function () {
         ->post(route('settings.mcp-tokens.store'), ['name' => 'X'])
         ->assertForbidden();
 });
+
+test('mcp tool create-task membuat subtask di bawah parent', function () {
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+    $parent = Task::factory()->create(['project_id' => $project->id, 'task_group_id' => $group->id]);
+
+    $response = mcpPost(mcpCall('tools/call', [
+        'name' => 'create-task',
+        'arguments' => [
+            'project_id' => $project->id,
+            'parent_id' => $parent->id,
+            'title' => 'Subtask via MCP',
+        ],
+    ]));
+
+    $response->assertOk();
+
+    $subtask = Task::where('title', 'Subtask via MCP')->first();
+    expect($subtask->parent_id)->toBe($parent->id)
+        ->and($subtask->task_group_id)->toBe($group->id);
+});
+
+test('mcp tool project-board menampilkan subtask', function () {
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+    $parent = Task::factory()->create(['project_id' => $project->id, 'task_group_id' => $group->id]);
+    Task::factory()->subtaskOf($parent)->create(['title' => 'Subtask MCP']);
+
+    $response = mcpPost(mcpCall('tools/call', [
+        'name' => 'project-board',
+        'arguments' => ['project_id' => $project->id],
+    ]));
+
+    $response->assertOk();
+
+    expect(mcpData($response->json(), 'groups.0.tasks'))->toHaveCount(1)
+        ->and(mcpData($response->json(), 'groups.0.tasks.0.subtasks.0.title'))->toBe('Subtask MCP');
+});
+
+test('mcp tool update-task menolak penyelesaian task yang masih punya subtask terbuka', function () {
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+    $parent = Task::factory()->create(['project_id' => $project->id, 'task_group_id' => $group->id]);
+    Task::factory()->subtaskOf($parent)->create();
+
+    $response = mcpPost(mcpCall('tools/call', [
+        'name' => 'update-task',
+        'arguments' => ['task_id' => $parent->id, 'completed' => true],
+    ]));
+
+    $response->assertOk();
+
+    expect($parent->fresh()->isCompleted())->toBeFalse();
+});

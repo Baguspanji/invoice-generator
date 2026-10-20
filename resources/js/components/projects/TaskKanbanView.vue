@@ -5,6 +5,7 @@ import {
     priorityBadgeClass,
     isTaskCompleted,
     isPreviewableImage,
+    subtaskProgress,
 } from './utils';
 import AttachmentPreviewModal from './AttachmentPreviewModal.vue';
 
@@ -19,13 +20,21 @@ defineProps({
         type: Function,
         required: true,
     },
+    visibleSubtasks: {
+        type: Function,
+        required: true,
+    },
+    isExpanded: {
+        type: Function,
+        required: true,
+    },
     cfg: {
         type: Object,
         required: true,
     },
 });
 
-defineEmits(['editTask']);
+defineEmits(['editTask', 'toggleExpand']);
 </script>
 
 <template>
@@ -111,6 +120,36 @@ defineEmits(['editTask']);
                                 <span class="max-w-[80px] truncate">{{ att.file_name }}</span>
                             </a>
                         </template>
+                    </div>
+
+                    <!-- Subtasks Accordion -->
+                    <div v-if="task.subtasks && task.subtasks.length" class="mt-2">
+                        <button
+                            type="button"
+                            @click="$emit('toggleExpand', task)"
+                            class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                            :aria-expanded="isExpanded(task)">
+                            <svg class="h-3 w-3 transition-transform" :class="{ 'rotate-90': isExpanded(task) }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            {{ subtaskProgress(task).done }}/{{ subtaskProgress(task).total }} subtask
+                        </button>
+
+                        <ul v-if="isExpanded(task)" class="mt-2 space-y-1.5 border-l-2 border-slate-100 pl-2.5 dark:border-slate-700">
+                            <li
+                                v-for="subtask in visibleSubtasks(task)"
+                                :key="subtask.id"
+                                class="flex items-center gap-2 text-xs">
+                                <span
+                                    class="h-2.5 w-2.5 shrink-0 rounded-full border"
+                                    :class="isTaskCompleted(subtask) ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 dark:border-slate-600'"></span>
+                                <button
+                                    type="button"
+                                    @click="$emit('editTask', subtask)"
+                                    class="min-w-0 truncate text-left text-slate-700 hover:text-primary dark:text-slate-300"
+                                    :class="{ 'line-through !text-slate-400': isTaskCompleted(subtask) }">
+                                    {{ subtask.title }}
+                                </button>
+                            </li>
+                        </ul>
                     </div>
 
                     <!-- Card Footer -->

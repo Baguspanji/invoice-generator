@@ -28,7 +28,9 @@ class ProjectBoard extends Tool
         try {
             $project = Project::with([
                 'customer',
-                'taskGroups.tasks' => fn ($query) => $query->with(['assignedUser', 'labels'])->orderBy('order_column'),
+                'taskGroups.tasks' => fn ($query) => $query->topLevel()
+                    ->with(['assignedUser', 'labels', 'subtasks.assignedUser'])
+                    ->orderBy('order_column'),
             ])->findOrFail($request->get('project_id'));
         } catch (ModelNotFoundException) {
             return Response::error('Project not found.');
@@ -48,6 +50,13 @@ class ProjectBoard extends Tool
                     'completed' => $task->completed_at !== null,
                     'assignee' => $task->assignedUser?->name,
                     'labels' => $task->labels->pluck('name')->values()->all(),
+                    'subtasks' => $task->subtasks->map(fn ($subtask) => [
+                        'id' => $subtask->id,
+                        'title' => $subtask->title,
+                        'priority' => $subtask->priority->value,
+                        'completed' => $subtask->completed_at !== null,
+                        'assignee' => $subtask->assignedUser?->name,
+                    ])->values()->all(),
                 ])->values()->all(),
             ])->values()->all(),
         ]);

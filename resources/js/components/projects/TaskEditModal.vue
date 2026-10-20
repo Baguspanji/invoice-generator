@@ -88,8 +88,12 @@ watch(() => props.task, (t) => {
                 <input type="hidden" name="_method" value="PUT" />
                 <input type="hidden" name="sync_labels" value="1" />
 
+                <p v-if="task.parent_id" class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    Subtask dari: <span class="font-semibold text-slate-700 dark:text-slate-200">{{ task.parent?.title }}</span>
+                </p>
+
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
+                    <div v-if="!task.parent_id">
                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Kolom Status</label>
                         <select
                             name="task_group_id"

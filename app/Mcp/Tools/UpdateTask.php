@@ -48,7 +48,7 @@ class UpdateTask extends Tool
             }
         }
 
-        if ($request->get('task_group_id') !== null) {
+        if ($request->get('task_group_id') !== null && ! $task->isSubtask()) {
             $group = $task->project->taskGroups()->find($request->get('task_group_id'));
 
             if (! $group) {
@@ -56,6 +56,7 @@ class UpdateTask extends Tool
             }
 
             $data['task_group_id'] = $group->id;
+            $task->subtasks()->update(['task_group_id' => $group->id]);
         }
 
         if ($request->get('billable') !== null) {
@@ -63,6 +64,10 @@ class UpdateTask extends Tool
         }
 
         if ($request->get('completed') !== null) {
+            if ($request->get('completed') && $task->hasOpenSubtasks()) {
+                return Response::error('Task cannot be completed while it has open subtasks.');
+            }
+
             $data['completed_at'] = $request->get('completed') ? ($task->completed_at ?? now()) : null;
         }
 

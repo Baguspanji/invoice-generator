@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'project_id',
+    'parent_id',
     'task_group_id',
     'assigned_to_user_id',
     'invoice_id',
@@ -60,6 +61,37 @@ class Task extends Model
     public function taskGroup(): BelongsTo
     {
         return $this->belongsTo(TaskGroup::class);
+    }
+
+    /**
+     * @return BelongsTo<Task, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Task::class, 'parent_id');
+    }
+
+    /**
+     * @return HasMany<Task, $this>
+     */
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'parent_id')->orderBy('order_column');
+    }
+
+    public function isSubtask(): bool
+    {
+        return $this->parent_id !== null;
+    }
+
+    public function hasSubtasks(): bool
+    {
+        return $this->subtasks()->exists();
+    }
+
+    public function hasOpenSubtasks(): bool
+    {
+        return $this->subtasks()->whereNull('completed_at')->exists();
     }
 
     /**
@@ -137,6 +169,15 @@ class Task extends Model
     public function scopePending(Builder $query): Builder
     {
         return $query->whereNull('completed_at');
+    }
+
+    /**
+     * @param  Builder<Task>  $query
+     * @return Builder<Task>
+     */
+    public function scopeTopLevel(Builder $query): Builder
+    {
+        return $query->whereNull('parent_id');
     }
 
     /**

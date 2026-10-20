@@ -40,4 +40,13 @@ class TaskFactory extends Factory
             'completed_at' => now(),
         ]);
     }
+
+    public function subtaskOf(Task $parent): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'project_id' => $parent->project_id,
+            'parent_id' => $parent->id,
+            'task_group_id' => $parent->task_group_id,
+        ]);
+    }
 }

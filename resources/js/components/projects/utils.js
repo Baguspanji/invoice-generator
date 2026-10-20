@@ -29,6 +29,14 @@ export function isTaskCompleted(task) {
     return Boolean(task.completed_at);
 }
 
+export function subtaskProgress(task) {
+    const subtasks = task.subtasks || [];
+    return {
+        done: subtasks.filter(isTaskCompleted).length,
+        total: subtasks.length,
+    };
+}
+
 export function getActiveTimer(task, authUserId) {
     return (task.time_logs || []).find(l => !l.stopped_at && l.user_id === authUserId);
 }

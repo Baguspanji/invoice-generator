@@ -10,13 +10,15 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
     public function store(Request $request, Project $project): RedirectResponse
     {
         $validated = $request->validate([
-            'task_group_id' => ['required', 'exists:task_groups,id'],
+            'parent_id' => ['nullable', 'integer', 'exists:tasks,id'],
+            'task_group_id' => ['required_without:parent_id', 'nullable', 'exists:task_groups,id'],
             'title' => ['required', 'string', 'max:255'],
             'priority' => ['nullable', 'in:low,medium,high,urgent'],
             'description' => ['nullable', 'string'],
@@ -30,12 +32,27 @@ class TaskController extends Controller
             'attachments.*' => ['file', 'max:10240'],
         ]);
 
+        $parent = null;
+        if (! empty($validated['parent_id'])) {
+            $parent = $project->tasks()->topLevel()->find($validated['parent_id']);
+
+            if (! $parent) {
+                throw ValidationException::withMessages([
+                    'parent_id' => 'Parent task harus berupa task utama dalam project ini.',
+                ]);
+            }
+        }
+
+        $taskGroupId = $parent?->task_group_id ?? $validated['task_group_id'];
+
         $maxOrder = $project->tasks()
-            ->where('task_group_id', $validated['task_group_id'])
+            ->where('task_group_id', $taskGroupId)
+            ->when($parent, fn ($query) => $query->where('parent_id', $parent->id), fn ($query) => $query->whereNull('parent_id'))
             ->max('order_column') ?? 0;
 
         $task = $project->tasks()->create([
-            'task_group_id' => $validated['task_group_id'],
+            'parent_id' => $parent?->id,
+            'task_group_id' => $taskGroupId,
             'title' => $validated['title'],
             'priority' => $validated['priority'] ?? 'medium',
             'description' => $validated['description'] ?? null,
@@ -64,7 +81,7 @@ class TaskController extends Controller
 
         return redirect()
             ->route('projects.show', $project)
-            ->with('success', 'Task berhasil ditambahkan.');
+            ->with('success', $parent ? 'Subtask berhasil ditambahkan.' : 'Task berhasil ditambahkan.');
     }
 
     public function update(Request $request, Project $project, Task $task): RedirectResponse
@@ -90,8 +107,18 @@ class TaskController extends Controller
             $completedAt = $request->boolean('completed') ? ($task->completed_at ?? now()) : null;
         }
 
+        if ($completedAt !== null && $task->hasOpenSubtasks()) {
+            throw ValidationException::withMessages([
+                'completed' => 'Task tidak bisa diselesaikan selama masih ada subtask yang belum selesai.',
+            ]);
+        }
+
+        $taskGroupId = $task->isSubtask()
+            ? $task->task_group_id
+            : ($validated['task_group_id'] ?? $task->task_group_id);
+
         $task->update([
-            'task_group_id' => $validated['task_group_id'] ?? $task->task_group_id,
+            'task_group_id' => $taskGroupId,
             'title' => $validated['title'],
             'priority' => $validated['priority'] ?? $task->priority,
             'description' => $validated['description'] ?? null,
@@ -101,6 +128,10 @@ class TaskController extends Controller
             'billable' => $request->has('billable') ? $request->boolean('billable') : $task->billable,
             'completed_at' => $completedAt,
         ]);
+
+        if (! $task->isSubtask()) {
+            $task->subtasks()->update(['task_group_id' => $taskGroupId]);
+        }
 
         if ($request->boolean('sync_labels') || $request->has('label_ids')) {
             $task->labels()->sync($validated['label_ids'] ?? []);
@@ -136,8 +167,22 @@ class TaskController extends Controller
         $task = $project->tasks()->findOrFail($validated['task_id']);
         $group = TaskGroup::findOrFail($validated['task_group_id']);
 
+        if ($task->isSubtask()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Subtask mengikuti group parent-nya dan tidak bisa dipindahkan sendiri.',
+            ], 422);
+        }
+
         $completedAt = $task->completed_at;
         if (strcasecmp($group->name, 'Done') === 0) {
+            if ($task->hasOpenSubtasks()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Task tidak bisa dipindahkan ke Done selama masih ada subtask yang belum selesai.',
+                ], 422);
+            }
+
             $completedAt = $completedAt ?? now();
         } else {
             $completedAt = null;
@@ -148,6 +193,8 @@ class TaskController extends Controller
             'order_column' => $validated['order_column'] ?? $task->order_column,
             'completed_at' => $completedAt,
         ]);
+
+        $task->subtasks()->update(['task_group_id' => $group->id]);
 
         if (! empty($validated['task_ids'])) {
             foreach ($validated['task_ids'] as $idx => $id) {
@@ -163,8 +210,12 @@ class TaskController extends Controller
 
     public function destroy(Project $project, Task $task): RedirectResponse
     {
-        foreach ($task->attachments as $attachment) {
-            Storage::disk('public')->delete($attachment->file_path);
+        $tasks = $task->subtasks()->with('attachments')->get()->push($task->load('attachments'));
+
+        foreach ($tasks as $item) {
+            foreach ($item->attachments as $attachment) {
+                Storage::disk('public')->delete($attachment->file_path);
+            }
         }
 
         $task->delete();

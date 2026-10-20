@@ -31,6 +31,7 @@ const unbilledTasks = ref(cfg.unbilledTasks || []);
 
 // Modals
 const showCreateModal = ref(false);
+const createParentTask = ref(null);
 const showEditModal = ref(false);
 const showInvoiceModal = ref(false);
 const selectedTask = ref(null);
@@ -40,12 +41,54 @@ const showCompleted = ref(false);
 
 const completedCount = computed(() => {
     return taskGroups.value.reduce(
-        (sum, g) => sum + (g.tasks || []).filter(isTaskCompleted).length,
+        (sum, g) => sum + (g.tasks || []).reduce(
+            (groupSum, t) => groupSum + [t, ...(t.subtasks || [])].filter(isTaskCompleted).length,
+            0
+        ),
         0
     );
 });
 
-// Live filters for List View
+// Accordion state for parent tasks, remembered per project
+const expandedStorageKey = `project-${project.id}-expanded-tasks`;
+const expandedTaskIds = ref(loadExpandedTaskIds());
+
+function loadExpandedTaskIds() {
+    try {
+        return JSON.parse(localStorage.getItem(expandedStorageKey) || '[]');
+    } catch {
+        return [];
+    }
+}
+
+watch(expandedTaskIds, (ids) => {
+    localStorage.setItem(expandedStorageKey, JSON.stringify(ids));
+}, { deep: true });
+
+function expandableTaskIds() {
+    return taskGroups.value.flatMap(g => (g.tasks || []).filter(t => (t.subtasks || []).length > 0).map(t => t.id));
+}
+
+const expandableCount = computed(() => expandableTaskIds().length);
+
+const allExpanded = computed(() => {
+    const ids = expandableTaskIds();
+    return ids.length > 0 && ids.every(id => expandedTaskIds.value.includes(id));
+});
+
+function toggleExpandAll() {
+    expandedTaskIds.value = allExpanded.value ? [] : expandableTaskIds();
+}
+
+function isExpanded(task) {
+    return expandedTaskIds.value.includes(task.id);
+}
+
+function toggleExpand(task) {
+    expandedTaskIds.value = isExpanded(task)
+        ? expandedTaskIds.value.filter(id => id !== task.id)
+        : [...expandedTaskIds.value, task.id];
+}// Live filters for List View
 const filters = reactive({
     search: cfg.filters?.search || '',
     priority: cfg.filters?.priority || '',
@@ -101,8 +144,15 @@ function matchesFilter(task) {
     return true;
 }
 
+function visibleSubtasks(task) {
+    return (task.subtasks || []).filter(s => (showCompleted.value || !isTaskCompleted(s)) && (!hasActiveFilters.value || matchesFilter(s)));
+}
+
 function filteredTasks(group) {
-    return (group.tasks || []).filter(t => (showCompleted.value || !isTaskCompleted(t)) && matchesFilter(t));
+    return (group.tasks || []).filter(t => {
+        const ownMatch = (showCompleted.value || !isTaskCompleted(t)) && matchesFilter(t);
+        return ownMatch || visibleSubtasks(t).length > 0;
+    });
 }
 
 function visibleBoardTasks(group) {
@@ -112,6 +162,16 @@ function visibleBoardTasks(group) {
 function openEditModal(task) {
     selectedTask.value = task;
     showEditModal.value = true;
+}
+
+function openCreateModal(parentTask = null) {
+    createParentTask.value = parentTask;
+    showCreateModal.value = true;
+}
+
+function closeCreateModal() {
+    showCreateModal.value = false;
+    createParentTask.value = null;
 }
 
 // Drag & Drop Sortable Initialization
@@ -141,6 +201,7 @@ function setupSortables() {
                     animation: 180,
                     ghostClass: 'opacity-40',
                     handle: '.drag-handle',
+                    draggable: 'tbody.list-task-item',
                     disabled: hasActiveFilters.value,
                     onEnd: handleDragEnd,
                 });
@@ -157,7 +218,8 @@ async function handleDragEnd(evt) {
     const newIndex = evt.newIndex;
 
     // Revert manual DOM movement so Vue handles virtual DOM rendering
-    evt.from.insertBefore(evt.item, evt.from.children[evt.oldIndex] || null);
+    const siblings = evt.from.matches('table') ? evt.from.querySelectorAll(':scope > tbody.list-task-item') : evt.from.children;
+    evt.from.insertBefore(evt.item, siblings[evt.oldIndex] || null);
 
     const fromGroup = taskGroups.value.find(g => g.id === fromGroupId);
     const toGroup = taskGroups.value.find(g => g.id === toGroupId);
@@ -168,6 +230,9 @@ async function handleDragEnd(evt) {
 
     const [movedTask] = fromGroup.tasks.splice(taskIndex, 1);
     movedTask.task_group_id = toGroupId;
+    (movedTask.subtasks || []).forEach(subtask => {
+        subtask.task_group_id = toGroupId;
+    });
 
     if (toGroup.name.toLowerCase() === 'done') {
         movedTask.completed_at = new Date().toISOString();
@@ -224,7 +289,7 @@ onMounted(() => {
             :unbilled-tasks-count="unbilledTasks.length"
             :urls="cfg.urls"
             @update:view-mode="viewMode = $event"
-            @open-create-modal="showCreateModal = true"
+            @open-create-modal="openCreateModal()"
             @open-invoice-modal="showInvoiceModal = true"
         />
 
@@ -236,16 +301,23 @@ onMounted(() => {
                 :users="users"
                 :labels="labels"
                 :completed-count="completedCount"
+                :expandable-count="expandableCount"
+                :all-expanded="allExpanded"
                 v-model:show-completed="showCompleted"
                 @reset="resetFilters"
+                @toggle-expand-all="toggleExpandAll"
             />
 
             <TaskListView
                 :task-groups="taskGroups"
                 :filtered-tasks="filteredTasks"
+                :visible-subtasks="visibleSubtasks"
+                :is-expanded="isExpanded"
                 :cfg="cfg"
                 :has-active-filters="hasActiveFilters"
                 @edit-task="openEditModal"
+                @toggle-expand="toggleExpand"
+                @add-subtask="openCreateModal"
             />
         </div>
 
@@ -267,8 +339,11 @@ onMounted(() => {
             <TaskKanbanView
                 :task-groups="taskGroups"
                 :visible-tasks="visibleBoardTasks"
+                :visible-subtasks="visibleSubtasks"
+                :is-expanded="isExpanded"
                 :cfg="cfg"
                 @edit-task="openEditModal"
+                @toggle-expand="toggleExpand"
             />
         </div>
 
@@ -280,7 +355,8 @@ onMounted(() => {
             :labels="labels"
             :project="project"
             :cfg="cfg"
-            @close="showCreateModal = false"
+            :parent-task="createParentTask"
+            @close="closeCreateModal"
         />
 
         <TaskEditModal

@@ -88,52 +88,64 @@ class ProjectController extends Controller
             || $request->filled('label_id')
             || $request->filled('billing');
 
+        $matchesFilters = function ($taskQuery) use ($request) {
+            if ($request->filled('search')) {
+                $search = $request->query('search');
+                $taskQuery->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('priority')) {
+                $taskQuery->where('priority', $request->query('priority'));
+            }
+
+            if ($request->filled('user_id')) {
+                if ($request->query('user_id') === 'unassigned') {
+                    $taskQuery->whereNull('assigned_to_user_id');
+                } else {
+                    $taskQuery->where('assigned_to_user_id', $request->query('user_id'));
+                }
+            }
+
+            if ($request->filled('label_id')) {
+                $taskQuery->whereHas('labels', fn ($q) => $q->where('labels.id', $request->query('label_id')));
+            }
+
+            if ($request->filled('billing')) {
+                match ($request->query('billing')) {
+                    'billable' => $taskQuery->where('billable', true)->whereNull('invoice_id'),
+                    'non_billable' => $taskQuery->where('billable', false),
+                    'invoiced' => $taskQuery->whereNotNull('invoice_id'),
+                    default => null,
+                };
+            }
+        };
+
+        $taskRelations = ['assignedUser', 'timeLogs', 'invoice', 'labels', 'attachments'];
+
         $project->load([
             'customer',
             'users',
-            'taskGroups.tasks' => function ($taskQuery) use ($request, $hasFilters) {
+            'taskGroups.tasks' => function ($taskQuery) use ($hasFilters, $matchesFilters, $taskRelations) {
+                $taskQuery->topLevel();
+
                 if ($hasFilters) {
-                    if ($request->filled('search')) {
-                        $search = $request->query('search');
-                        $taskQuery->where(function ($q) use ($search) {
-                            $q->where('title', 'like', "%{$search}%")
-                                ->orWhere('description', 'like', "%{$search}%");
-                        });
-                    }
-
-                    if ($request->filled('priority')) {
-                        $taskQuery->where('priority', $request->query('priority'));
-                    }
-
-                    if ($request->filled('user_id')) {
-                        if ($request->query('user_id') === 'unassigned') {
-                            $taskQuery->whereNull('assigned_to_user_id');
-                        } else {
-                            $taskQuery->where('assigned_to_user_id', $request->query('user_id'));
-                        }
-                    }
-
-                    if ($request->filled('label_id')) {
-                        $taskQuery->whereHas('labels', fn ($q) => $q->where('labels.id', $request->query('label_id')));
-                    }
-
-                    if ($request->filled('billing')) {
-                        match ($request->query('billing')) {
-                            'billable' => $taskQuery->where('billable', true)->whereNull('invoice_id'),
-                            'non_billable' => $taskQuery->where('billable', false),
-                            'invoiced' => $taskQuery->whereNotNull('invoice_id'),
-                            default => null,
-                        };
-                    }
+                    $taskQuery->where(function ($q) use ($matchesFilters) {
+                        $q->where(fn ($self) => $matchesFilters($self))
+                            ->orWhereHas('subtasks', fn ($subtaskQuery) => $matchesFilters($subtaskQuery));
+                    });
                 }
 
-                $taskQuery->with([
-                    'assignedUser',
-                    'timeLogs',
-                    'invoice',
-                    'labels',
-                    'attachments',
-                ]);
+                $taskQuery->with($taskRelations)
+                    ->with(['subtasks' => function ($subtaskQuery) use ($hasFilters, $matchesFilters, $taskRelations) {
+                        if ($hasFilters) {
+                            $matchesFilters($subtaskQuery);
+                        }
+
+                        $subtaskQuery->with([...$taskRelations, 'parent:id,title']);
+                    }]);
             },
         ]);
 

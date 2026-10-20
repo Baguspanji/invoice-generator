@@ -4,6 +4,65 @@
 
 @section('content')
     @php
+        $mapTask = function ($task) use (&$mapTask) {
+            return [
+                'id' => $task->id,
+                'project_id' => $task->project_id,
+                'parent_id' => $task->parent_id,
+                'task_group_id' => $task->task_group_id,
+                'assigned_to_user_id' => $task->assigned_to_user_id,
+                'invoice_id' => $task->invoice_id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'estimation' => $task->estimation,
+                'fixed_price' => $task->fixed_price,
+                'billable' => (bool) $task->billable,
+                'priority' => [
+                    'value' => $task->priority->value,
+                    'label' => $task->priority->label(),
+                    'badge_class' => $task->priority->badgeClass(),
+                ],
+                'order_column' => $task->order_column,
+                'completed_at' => $task->completed_at?->toISOString(),
+                'assigned_user' => $task->assignedUser ? [
+                    'id' => $task->assignedUser->id,
+                    'name' => $task->assignedUser->name,
+                ] : null,
+                'labels' => $task->labels->map(fn ($l) => [
+                    'id' => $l->id,
+                    'name' => $l->name,
+                    'color' => $l->color,
+                ])->values(),
+                'attachments' => $task->attachments->map(fn ($att) => [
+                    'id' => $att->id,
+                    'file_name' => $att->file_name,
+                    'file_size' => $att->file_size,
+                    'mime_type' => $att->mime_type,
+                    'url' => $att->url(),
+                    'human_size' => $att->humanSize(),
+                ])->values(),
+                'time_logs' => $task->timeLogs->map(fn ($log) => [
+                    'id' => $log->id,
+                    'user_id' => $log->user_id,
+                    'minutes' => $log->minutes,
+                    'stopped_at' => $log->stopped_at?->toISOString(),
+                ])->values(),
+                'invoice' => $task->invoice ? [
+                    'id' => $task->invoice->id,
+                    'invoice_number' => $task->invoice->invoice_number,
+                ] : null,
+                'parent' => $task->parent_id && $task->parent ? [
+                    'id' => $task->parent->id,
+                    'title' => $task->parent->title,
+                ] : null,
+                'subtasks' => $task->parent_id === null
+                    ? $task->subtasks->map($mapTask)->values()
+                    : [],
+            ];
+        };
+    @endphp
+
+    @php
         $boardConfig = [
             'csrf' => csrf_token(),
             'authUserId' => auth()->id(),
@@ -18,60 +77,13 @@
                 'rate' => (float) $project->rate,
                 'pricing_type' => $project->pricing_type,
             ],
-            'taskGroups' => $project->taskGroups->map(function ($group) {
+            'taskGroups' => $project->taskGroups->map(function ($group) use ($mapTask) {
                 return [
                     'id' => $group->id,
                     'name' => $group->name,
                     'color' => $group->color,
                     'order_column' => $group->order_column,
-                    'tasks' => $group->tasks->map(function ($task) {
-                        return [
-                            'id' => $task->id,
-                            'project_id' => $task->project_id,
-                            'task_group_id' => $task->task_group_id,
-                            'assigned_to_user_id' => $task->assigned_to_user_id,
-                            'invoice_id' => $task->invoice_id,
-                            'title' => $task->title,
-                            'description' => $task->description,
-                            'estimation' => $task->estimation,
-                            'fixed_price' => $task->fixed_price,
-                            'billable' => (bool) $task->billable,
-                            'priority' => [
-                                'value' => $task->priority->value,
-                                'label' => $task->priority->label(),
-                                'badge_class' => $task->priority->badgeClass(),
-                            ],
-                            'order_column' => $task->order_column,
-                            'completed_at' => $task->completed_at?->toISOString(),
-                            'assigned_user' => $task->assignedUser ? [
-                                'id' => $task->assignedUser->id,
-                                'name' => $task->assignedUser->name,
-                            ] : null,
-                            'labels' => $task->labels->map(fn ($l) => [
-                                'id' => $l->id,
-                                'name' => $l->name,
-                                'color' => $l->color,
-                            ])->values(),
-                            'attachments' => $task->attachments->map(fn ($att) => [
-                                'id' => $att->id,
-                                'file_name' => $att->file_name,
-                                'file_size' => $att->file_size,
-                                'mime_type' => $att->mime_type,
-                                'url' => $att->url(),
-                                'human_size' => $att->humanSize(),
-                            ])->values(),
-                            'time_logs' => $task->timeLogs->map(fn ($log) => [
-                                'id' => $log->id,
-                                'user_id' => $log->user_id,
-                                'minutes' => $log->minutes,
-                                'stopped_at' => $log->stopped_at?->toISOString(),
-                            ])->values(),
-                            'invoice' => $task->invoice ? [
-                                'id' => $task->invoice->id,
-                                'invoice_number' => $task->invoice->invoice_number,
-                            ] : null,
-                        ];
-                    })->values(),
+                    'tasks' => $group->tasks->map(fn ($task) => $mapTask($task))->values(),
                 ];
             })->values(),
             'users' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name])->values(),
