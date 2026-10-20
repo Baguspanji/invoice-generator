@@ -2,6 +2,8 @@
 
 use App\Enums\UserRole;
 use App\Models\Customer;
+use App\Models\DocumentationPage;
+use App\Models\DocumentationSpace;
 use App\Models\Invoice;
 use App\Models\McpToken;
 use App\Models\Project;
@@ -72,7 +74,13 @@ test('mcp mendaftarkan daftar tool icesum', function () {
         'generate-invoice',
         'mark-invoice-paid',
         'cancel-invoice',
-        'download-invoice-pdf'
+        'download-invoice-pdf',
+        'list-doc-pages',
+        'doc-page-detail',
+        'create-doc-page',
+        'update-doc-page',
+        'change-doc-page-status',
+        'link-doc-page-task'
     );
 });
 
@@ -448,4 +456,55 @@ test('mcp tool update-task menolak penyelesaian task yang masih punya subtask te
     $response->assertOk();
 
     expect($parent->fresh()->isCompleted())->toBeFalse();
+});
+
+function mcpTool(string $name, array $arguments): array
+{
+    return mcpPost(mcpCall('tools/call', ['name' => $name, 'arguments' => $arguments]))->json();
+}
+
+test('mcp dokumentasi: buat, baca, ubah, publikasi, dan tautkan task', function () {
+    User::factory()->create();
+    $project = Project::factory()->create();
+    $group = TaskGroup::factory()->create(['project_id' => $project->id]);
+    $task = Task::factory()->create(['project_id' => $project->id, 'task_group_id' => $group->id]);
+
+    $created = mcpTool('create-doc-page', [
+        'project_id' => $project->id,
+        'title' => 'Arsitektur',
+        'content_markdown' => "# Judul\n\nParagraf.\n\n- satu\n- dua",
+    ]);
+    $pageId = mcpData($created, 'id');
+
+    expect(mcpData($created, 'status'))->toBe('draft')
+        ->and(DocumentationSpace::where('project_id', $project->id)->exists())->toBeTrue();
+
+    $list = mcpTool('list-doc-pages', ['project_id' => $project->id, 'search' => 'Judul']);
+    expect(mcpData($list, 'pages.0.id'))->toBe($pageId);
+
+    $detail = mcpTool('doc-page-detail', ['page_id' => $pageId]);
+    expect(mcpData($detail, 'content_markdown'))->toContain('# Judul')->toContain('- satu');
+
+    $updated = mcpTool('update-doc-page', ['page_id' => $pageId, 'lock_version' => 1, 'title' => 'Arsitektur v2']);
+    expect(mcpData($updated, 'lock_version'))->toBe(2);
+
+    $stale = mcpTool('update-doc-page', ['page_id' => $pageId, 'lock_version' => 1, 'title' => 'X']);
+    expect($stale['result']['isError'])->toBeTrue();
+
+    $published = mcpTool('change-doc-page-status', ['page_id' => $pageId, 'action' => 'publish']);
+    expect(mcpData($published, 'status'))->toBe('published')
+        ->and(DocumentationPage::find($pageId)->versions)->toHaveCount(1);
+
+    $linked = mcpTool('link-doc-page-task', ['page_id' => $pageId, 'task_id' => $task->id]);
+    expect(mcpData($linked, 'tasks.0.id'))->toBe($task->id);
+});
+
+test('mcp dokumentasi menolak task dari project lain', function () {
+    User::factory()->create();
+    $page = DocumentationPage::factory()->create();
+    $otherTask = Task::factory()->create();
+
+    $result = mcpTool('link-doc-page-task', ['page_id' => $page->id, 'task_id' => $otherTask->id]);
+
+    expect($result['result']['isError'])->toBeTrue();
 });
