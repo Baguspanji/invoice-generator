@@ -24,27 +24,17 @@ defineEmits(['close']);
 
 const container = ref(null);
 
-let mermaidPromise = null;
+let pelePromise = null;
 
 /**
- * Muat Mermaid hanya saat pratinjau dibuka agar bundle awal tetap ringan.
+ * Muat Pele hanya saat pratinjau dibuka agar bundle awal tetap ringan.
  */
-function loadMermaid() {
-    if (!mermaidPromise) {
-        mermaidPromise = import('mermaid').then((module) => {
-            const mermaid = module.default;
-
-            mermaid.initialize({
-                startOnLoad: false,
-                securityLevel: 'strict',
-                theme: 'default',
-            });
-
-            return mermaid;
-        });
+function loadPele() {
+    if (!pelePromise) {
+        pelePromise = import('pele');
     }
 
-    return mermaidPromise;
+    return pelePromise;
 }
 
 watch(
@@ -67,10 +57,18 @@ watch(
         }
 
         try {
-            const mermaid = await loadMermaid();
-            await mermaid.run({ nodes });
+            const { mount } = await loadPele();
+            for (const node of nodes) {
+                const text = node.textContent ?? '';
+                node.dataset.processed = 'true';
+                try {
+                    mount(node, text);
+                } catch (err) {
+                    console.error('Gagal merender diagram Pele:', err);
+                }
+            }
         } catch (e) {
-            console.error('Gagal merender diagram Mermaid:', e);
+            console.error('Gagal memuat modul Pele:', e);
         }
     }
 );
@@ -169,7 +167,25 @@ watch(
 
 .preview-content :deep(.mermaid) {
     margin: 0.75rem 0;
-    text-align: center;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+}
+
+.preview-content :deep(.pele) {
+    max-width: 100%;
+    height: auto;
+}
+
+:global(.dark) .preview-content :deep(.pele) {
+    --pele-bg: #0f172a;
+    --pele-fg: #f8fafc;
+    --pele-muted: #94a3b8;
+    --pele-line: #94a3b8;
+    --pele-surface: #1e293b;
+    --pele-surface-alt: #334155;
+    --pele-border: #475569;
+    --pele-accent: #38bdf8;
 }
 
 .preview-content :deep(.callout) {

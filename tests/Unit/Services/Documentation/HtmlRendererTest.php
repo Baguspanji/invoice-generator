@@ -48,6 +48,17 @@ test('code block mermaid dirender sebagai div mermaid', function () {
     expect($html)->toBe('<div class="mermaid">graph TD; A--&gt;B;</div>');
 });
 
+test('code block pele dirender sebagai div mermaid untuk didukung parser diagram', function () {
+    $html = (new HtmlRenderer)->toHtml([
+        'type' => 'doc',
+        'content' => [
+            ['type' => 'codeBlock', 'attrs' => ['language' => 'pele'], 'content' => [['type' => 'text', 'text' => 'graph TD; A-->B;']]],
+        ],
+    ]);
+
+    expect($html)->toBe('<div class="mermaid">graph TD; A--&gt;B;</div>');
+});
+
 test('code block biasa dirender sebagai pre code', function () {
     $html = (new HtmlRenderer)->toHtml([
         'type' => 'doc',

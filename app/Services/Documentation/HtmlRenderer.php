@@ -113,7 +113,7 @@ class HtmlRenderer
         $text = $this->plainText($children);
         $language = strtolower((string) ($attrs['language'] ?? ''));
 
-        if ($language === 'mermaid') {
+        if ($language === 'mermaid' || $language === 'pele') {
             return '<div class="mermaid">'.$this->escape($text).'</div>';
         }
 
